@@ -4,14 +4,18 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import io.ktor.network.selector.SelectorManager
 import io.ktor.network.sockets.Socket
 import io.ktor.network.sockets.aSocket
 import io.ktor.network.sockets.openReadChannel
 import io.ktor.network.sockets.openWriteChannel
+import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.ByteWriteChannel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlin.system.exitProcess
 
 class ConnectionViewModel : ViewModel() {
@@ -29,25 +33,77 @@ class ConnectionViewModel : ViewModel() {
 
     private val selectorManager = SelectorManager(Dispatchers.IO)
     private lateinit var socket: Socket
+    private lateinit var receiveChannel: ByteReadChannel
+    private lateinit var sendChannel: ByteWriteChannel
 
-    //suspend fun connect(ip: String, port: String){
-    fun connect(ip: String, port: String) {
-        Log.d("ModBus", "Beginning connection")
-        runBlocking {
-            _connectionStatus.value = ConnectionStatus.CONNECTING
-            Log.d("Modbus","$ip and ${port.toInt()}")
-            try {
-                socket = aSocket(selectorManager).tcp().connect(ip, port.toInt())
-                Log.d("ModBus", "Connected")
-                _connectionStatus.value = ConnectionStatus.CONNECTED
-            } catch (e: Exception) {
-                Log.d("ModBus", "Not connected")
-                Log.e("ModBus", e.toString())
-                Log.e("ModBus", e.message.toString())
-                _connectionStatus.value = ConnectionStatus.DISCONNECTED
-            }
-            Log.d("ModBus", connectionStatus.value.toString())
+    init {
+        _connectionStatus.value = ConnectionStatus.DISCONNECTED
+        _readStatus.value = ConnectionStatus.DISCONNECTED
+        _writeStatus.value = ConnectionStatus.DISCONNECTED
+    }
+
+    fun connect(ip: String, port: String) = viewModelScope.launch {
+        Log.d("Modbus", "connecting to socket $ip and ${port.toInt()}")
+        try {
+            _connectionStatus.value = ConnectionStatus.WORKING
+            socket = aSocket(selectorManager).tcp().connect(ip, port.toInt())
+            changeStatusOfConnection(
+                "Socket connected",
+                _connectionStatus,
+                ConnectionStatus.CONNECTED
+            )
+            _readStatus.value = ConnectionStatus.WORKING
+            receiveChannel = socket.openReadChannel()
+            changeStatusOfConnection(
+                "Read channel open",
+                _readStatus,
+                ConnectionStatus.CONNECTED
+            )
+            _writeStatus.value = ConnectionStatus.WORKING
+            sendChannel = socket.openWriteChannel(true)
+            changeStatusOfConnection(
+                "Write channel open",
+                _writeStatus,
+                ConnectionStatus.CONNECTED
+            )
+        } catch (e: Exception) {
+            Log.d("ModBus", "Not connected")
+            Log.e("ModBus", e.toString())
+            Log.e("ModBus", e.message.toString())
+            _connectionStatus.value = ConnectionStatus.DISCONNECTED
+            _readStatus.value = ConnectionStatus.DISCONNECTED
+            _writeStatus.value = ConnectionStatus.DISCONNECTED
         }
+        Log.d("ModBus", "socket ${connectionStatus.value.toString()}")
+    }
+
+    fun disconnect() = viewModelScope.launch {
+        try {
+            Log.d("Modbus", "Closing connection")
+            _connectionStatus.value = ConnectionStatus.WORKING
+            withContext(Dispatchers.IO) {
+                socket.close()
+                changeStatusOfConnection(
+                    "Socket disconnected",
+                    _connectionStatus,
+                    ConnectionStatus.DISCONNECTED
+                )
+                _readStatus.value = ConnectionStatus.DISCONNECTED
+                _writeStatus.value = ConnectionStatus.DISCONNECTED
+            }
+        } catch (e: Exception) {
+            Log.e("ModBus", e.toString())
+            Log.e("ModBus", e.message.toString())
+        }
+    }
+
+    private fun changeStatusOfConnection(
+        message: String,
+        statusVar: MutableLiveData<ConnectionStatus>,
+        newStatus: ConnectionStatus
+    ) {
+        Log.d("ModBus", message)
+        statusVar.value = newStatus
     }
 
     private fun testSend() {

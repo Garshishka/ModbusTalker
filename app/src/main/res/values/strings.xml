@@ -1,8 +1,7 @@
 <resources>
     <string name="app_name">ModBus Talker</string>
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="connect">Connect</string>
+    <string name="disconnect">Disconnect</string>
     <string name="ip_label">IP:</string>
     <string name="port_label">Port:</string>
 </resources>

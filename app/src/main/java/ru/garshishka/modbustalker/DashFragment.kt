@@ -1,24 +1,15 @@
 package ru.garshishka.modbustalker
 
-import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import by.kirich1409.viewbindingdelegate.CreateMethod
 import by.kirich1409.viewbindingdelegate.viewBinding
-import io.ktor.network.selector.SelectorManager
-import io.ktor.network.sockets.aSocket
-import io.ktor.network.sockets.openReadChannel
-import io.ktor.network.sockets.openWriteChannel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import ru.garshishka.modbustalker.databinding.FragmentDashBinding
-import kotlin.system.exitProcess
 
 class DashFragment : Fragment() {
     private val viewModel: ConnectionViewModel by activityViewModels()
@@ -30,21 +21,48 @@ class DashFragment : Fragment() {
     ): View {
         binding.apply {
             connectButton.setOnClickListener {
-                Log.d("connection", "trying to connect")
-                viewModel.connect(ipInput.text.toString(),portInput.text.toString())
+                when(viewModel.connectionStatus.value){
+                    ConnectionStatus.DISCONNECTED -> viewModel.connect(ipInput.text.toString(), portInput.text.toString())
+                    ConnectionStatus.CONNECTED -> viewModel.disconnect()
+                    else ->{}
+                }
             }
         }
         viewModel.apply {
-            connectionStatus.observe(viewLifecycleOwner){
-                when(it){
-                    ConnectionStatus.DISCONNECTED -> binding.connectionIcon.backgroundTintList = requireContext().getColorStateList(R.color.red)
-                    ConnectionStatus.CONNECTED -> binding.connectionIcon.backgroundTintList = requireContext().getColorStateList(R.color.green)
-                    ConnectionStatus.CONNECTING -> binding.connectionIcon.backgroundTintList = requireContext().getColorStateList(R.color.yellow)
+            connectionStatus.observe(viewLifecycleOwner) {
+                changeColorDueToStatusChange(it, binding.connectionIcon)
+                if (it == ConnectionStatus.DISCONNECTED) {
+                    binding.connectionIcon.setImageResource(R.drawable.signal_connected_24)
+                    binding.connectButton.setText(R.string.connect)
+                } else {
+                    binding.connectionIcon.setImageResource(R.drawable.signal_disconnected_24)
                 }
+                if(it == ConnectionStatus.CONNECTED){
+                    binding.connectButton.setText(R.string.disconnect)
+                }
+            }
+            readStatus.observe(viewLifecycleOwner) {
+                changeColorDueToStatusChange(it, binding.readIcon)
+            }
+            writeStatus.observe(viewLifecycleOwner) {
+                changeColorDueToStatusChange(it, binding.writeIcon)
             }
         }
         return binding.root
     }
 
+
+    private fun changeColorDueToStatusChange(newStatus: ConnectionStatus, icon: ImageView) {
+        when (newStatus) {
+            ConnectionStatus.DISCONNECTED -> icon.backgroundTintList =
+                requireContext().getColorStateList(R.color.red)
+
+            ConnectionStatus.CONNECTED -> icon.backgroundTintList =
+                requireContext().getColorStateList(R.color.green)
+
+            ConnectionStatus.WORKING -> icon.backgroundTintList =
+                requireContext().getColorStateList(R.color.yellow)
+        }
+    }
 
 }
