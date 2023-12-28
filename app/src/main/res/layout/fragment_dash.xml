@@ -7,12 +7,116 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:context=".DashFragment">
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/test_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Test"
-        android:layout_margin="16dp"
- />
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/ip_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/ip_label"
+            android:textAppearance="@style/TextAppearance.AppCompat.Large"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/ip_input"
+            app:layout_constraintEnd_toStartOf="@id/ip_input"
+            app:layout_constraintBottom_toBottomOf="@id/ip_input"
+            android:layout_marginHorizontal="@dimen/default_margin"
+            />
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/ip_input"
+            android:layout_width="@dimen/ip_input_length"
+            android:layout_height="wrap_content"
+            tools:text="127.127.127.127"
+            android:text="10.0.2.2"
+            android:textAlignment="center"
+            android:textAppearance="@style/TextAppearance.AppCompat.Large"
+            app:layout_constraintStart_toEndOf="@id/ip_label"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/connect_button"
+            android:layout_marginHorizontal="8dp"
+            />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/port_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/port_label"
+            android:textAppearance="@style/TextAppearance.AppCompat.Large"
+            app:layout_constraintTop_toTopOf="@id/port_input"
+            app:layout_constraintStart_toEndOf="@id/ip_input"
+            app:layout_constraintEnd_toStartOf="@id/port_input"
+            app:layout_constraintBottom_toBottomOf="@id/port_input"
+            android:layout_marginHorizontal="@dimen/default_margin"
+            />
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/port_input"
+            android:layout_width="@dimen/port_input_length"
+            android:layout_height="wrap_content"
+            tools:text="9999"
+            android:text="502"
+            android:textAlignment="center"
+            android:textAppearance="@style/TextAppearance.AppCompat.Large"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/port_label"
+            app:layout_constraintTop_toTopOf="@id/ip_input"
+            app:layout_constraintBottom_toBottomOf="@id/ip_input"
+            android:layout_marginHorizontal="8dp"
+            />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/connect_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/connect"
+            android:textAppearance="@style/TextAppearance.AppCompat.Headline"
+            android:layout_margin="@dimen/bigger_margin"
+            app:layout_constraintTop_toBottomOf="@id/ip_input"
+            app:layout_constraintStart_toStartOf="parent"
+
+            app:layout_constraintBottom_toBottomOf="parent"
+            />
+
+        <ImageView
+            android:id="@+id/connection_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/StatusIcon"
+            android:layout_marginHorizontal="@dimen/default_margin"
+            android:src="@drawable/signal_disconnected_24"
+            app:layout_constraintTop_toTopOf="@id/connect_button"
+            app:layout_constraintBottom_toBottomOf="@id/connect_button"
+            app:layout_constraintEnd_toStartOf="@id/read_icon"
+            app:layout_constraintStart_toEndOf="@id/connect_button"
+            app:layout_constraintHorizontal_chainStyle="packed"
+            />
+        <ImageView
+            android:id="@+id/read_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/StatusIcon"
+            android:src="@drawable/signal_read_24"
+            android:layout_marginHorizontal="@dimen/default_margin"
+            app:layout_constraintTop_toTopOf="@id/connect_button"
+            app:layout_constraintBottom_toBottomOf="@id/connect_button"
+            app:layout_constraintEnd_toStartOf="@id/write_icon"
+            app:layout_constraintStart_toEndOf="@id/connection_icon"
+            />
+        <ImageView
+            android:id="@+id/write_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/StatusIcon"
+            android:src="@drawable/signal_write_24"
+            android:layout_marginHorizontal="@dimen/default_margin"
+            app:layout_constraintTop_toTopOf="@id/connect_button"
+            app:layout_constraintBottom_toBottomOf="@id/connect_button"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/read_icon"
+            />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </LinearLayout>
