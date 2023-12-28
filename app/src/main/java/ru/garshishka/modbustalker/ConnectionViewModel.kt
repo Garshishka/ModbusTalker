@@ -12,11 +12,11 @@ import io.ktor.network.sockets.openReadChannel
 import io.ktor.network.sockets.openWriteChannel
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.ByteWriteChannel
+import io.ktor.utils.io.readAvailable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import kotlin.system.exitProcess
+import ru.garshishka.modbustalker.utils.makeByteList
 
 class ConnectionViewModel : ViewModel() {
     private val _connectionStatus = MutableLiveData<ConnectionStatus>()
@@ -31,6 +31,10 @@ class ConnectionViewModel : ViewModel() {
     val writeStatus: LiveData<ConnectionStatus>
         get() = _writeStatus
 
+    private val _debugText = MutableLiveData<String>()
+    val debugText: LiveData<String>
+        get() = _debugText
+
     private val selectorManager = SelectorManager(Dispatchers.IO)
     private lateinit var socket: Socket
     private lateinit var receiveChannel: ByteReadChannel
@@ -40,10 +44,11 @@ class ConnectionViewModel : ViewModel() {
         _connectionStatus.value = ConnectionStatus.DISCONNECTED
         _readStatus.value = ConnectionStatus.DISCONNECTED
         _writeStatus.value = ConnectionStatus.DISCONNECTED
+        _debugText.value = ""
     }
 
     fun connect(ip: String, port: String) = viewModelScope.launch {
-        Log.d("Modbus", "connecting to socket $ip and ${port.toInt()}")
+        logDebug("connecting to socket $ip and ${port.toInt()}")
         try {
             _connectionStatus.value = ConnectionStatus.WORKING
             socket = aSocket(selectorManager).tcp().connect(ip, port.toInt())
@@ -67,57 +72,41 @@ class ConnectionViewModel : ViewModel() {
                 ConnectionStatus.CONNECTED
             )
         } catch (e: Exception) {
-            Log.d("ModBus", "Not connected")
-            Log.e("ModBus", e.toString())
-            Log.e("ModBus", e.message.toString())
+            logError("Connection error $e")
+            logError(e.message.toString())
             _connectionStatus.value = ConnectionStatus.DISCONNECTED
             _readStatus.value = ConnectionStatus.DISCONNECTED
             _writeStatus.value = ConnectionStatus.DISCONNECTED
         }
-        Log.d("ModBus", "socket ${connectionStatus.value.toString()}")
+        logDebug("socket ${connectionStatus.value.toString()}")
     }
 
     fun disconnect() = viewModelScope.launch {
         try {
-            Log.d("Modbus", "Closing connection")
+            logDebug("Closing connection")
             _connectionStatus.value = ConnectionStatus.WORKING
             withContext(Dispatchers.IO) {
                 socket.close()
-                changeStatusOfConnection(
-                    "Socket disconnected",
-                    _connectionStatus,
-                    ConnectionStatus.DISCONNECTED
-                )
-                _readStatus.value = ConnectionStatus.DISCONNECTED
-                _writeStatus.value = ConnectionStatus.DISCONNECTED
             }
+            changeStatusOfConnection(
+                "Socket disconnected",
+                _connectionStatus,
+                ConnectionStatus.DISCONNECTED
+            )
+            _readStatus.value = ConnectionStatus.DISCONNECTED
+            _writeStatus.value = ConnectionStatus.DISCONNECTED
         } catch (e: Exception) {
-            Log.e("ModBus", e.toString())
-            Log.e("ModBus", e.message.toString())
+            logError("Disconnection error $e")
+            logError(e.message.toString())
         }
     }
 
-    private fun changeStatusOfConnection(
-        message: String,
-        statusVar: MutableLiveData<ConnectionStatus>,
-        newStatus: ConnectionStatus
-    ) {
-        Log.d("ModBus", message)
-        statusVar.value = newStatus
-    }
-
-    private fun testSend() {
-        Log.d("ModBus", "Beginning function")
-        runBlocking {
-
-            try {
-                socket = aSocket(selectorManager).tcp().connect("10.0.2.2", 502)
-                Log.d("ModBus", "connected")
-                val receiveChannel = socket.openReadChannel()
-                val sendChannel = socket.openWriteChannel(autoFlush = true)
-
-                Log.d("ModBus", "sending to socket")
-                val packet = byteArrayOfInts(
+    fun send() = viewModelScope.launch {
+        logDebug("Sending packet to socket")
+        try {
+            _writeStatus.value = ConnectionStatus.WORKING
+            /*val packet = byteArrayFromHex(
+                listOf(
                     0x00,
                     0x01,
                     0x00,
@@ -131,34 +120,70 @@ class ConnectionViewModel : ViewModel() {
                     0xff,
                     0x00
                 )
-                sendChannel.writeFully(packet, 0, 12)
+            )*/
+            val registryAddress = 1
+            val amountToCheck = 3
+            logDebug("Checking $amountToCheck registry from $registryAddress")
+            val packet = makeByteArrayForAnalogueOut(1,3)
+            sendChannel.writeFully(packet, 0, packet.size)
+            logDebug("Sent packet ")
 
-                launch(Dispatchers.IO) {
-                    while (true) {
-                        val ar = ByteArray(9)
-                        val greeting = receiveChannel.readFully(ar, 0, 9)
-                        if (greeting != null) {
-                            println(greeting)
-                            var outputString = ""
-                            ar.forEach { outputString += "${it.toUByte()}, " }
-                            println(outputString)
-                        } else {
-                            println("Server closed a connection")
-                            socket.close()
-                            selectorManager.close()
-                            exitProcess(0)
-                        }
-                    }
-                }
-
-                //socket.close()
-            } catch (e: Exception) {
-                Log.e("ModBus", e.toString())
-                Log.e("ModBus", e.message.toString())
-            }
+            _readStatus.value = ConnectionStatus.WORKING
+            val response = ByteArray(9+amountToCheck*2)
+            receiveChannel.readAvailable(response)
+            var outputString = ""
+            response.forEach { outputString += "${it.toUByte()}, " }
+            logResponse(outputString)
+        } catch (e: Exception) {
+            logError("Sending error $e")
+            logError(e.message.toString())
+        } finally {
+            _writeStatus.value = ConnectionStatus.CONNECTED
+            _readStatus.value = ConnectionStatus.CONNECTED
         }
     }
 
-    private fun byteArrayOfInts(vararg ints: Int) =
-        ByteArray(ints.size) { pos -> ints[pos].toByte() }
+    private fun changeStatusOfConnection(
+        message: String,
+        statusVar: MutableLiveData<ConnectionStatus>,
+        newStatus: ConnectionStatus
+    ) {
+        logDebug(message)
+        statusVar.value = newStatus
+    }
+
+    private fun logDebug(message: String) {
+        Log.d("ModBus", message)
+        _debugText.value = "$message\n" + _debugText.value
+    }
+
+    private fun logResponse(message: String) {
+        Log.i("ModBus", message)
+        _debugText.value = "RESPONSE $message\n" + _debugText.value
+    }
+
+    private fun logError(message: String) {
+        Log.e("ModBus", message)
+        _debugText.value = "!ERROR! $message\n" + _debugText.value
+    }
+
+    private fun makeByteArrayForAnalogueOut(registryAddress: Int, amountToCheck: Int) : ByteArray{
+        val identifier = 1
+        val messageLength = 0x06
+        val deviceAddress = 0x01
+        val function = 0x03
+
+        val list = identifier.makeByteList()+
+                listOf(0x00,
+            0x00,
+            0x00,
+            messageLength,
+            deviceAddress,
+            function,
+        ) + registryAddress.makeByteList() + amountToCheck.makeByteList()
+        return byteArrayFromHex(list)
+    }
+
+    private fun byteArrayFromHex(numbers: List<Int>) =//vararg ints: Int) =
+        ByteArray(numbers.size) { pos -> numbers[pos].toByte() }
 }
