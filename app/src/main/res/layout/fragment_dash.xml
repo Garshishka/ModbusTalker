@@ -34,7 +34,7 @@
             android:layout_width="@dimen/ip_input_length"
             android:layout_height="wrap_content"
             tools:text="127.127.127.127"
-            android:text="10.0.2.2"
+            android:text="@string/base_ip"
             android:textAlignment="center"
             android:textAppearance="@style/TextAppearance.AppCompat.Large"
             app:layout_constraintStart_toEndOf="@id/ip_label"
@@ -61,7 +61,7 @@
             android:layout_width="@dimen/port_input_length"
             android:layout_height="wrap_content"
             tools:text="9999"
-            android:text="502"
+            android:text="@string/base_port"
             android:textAlignment="center"
             android:textAppearance="@style/TextAppearance.AppCompat.Large"
             app:layout_constraintEnd_toEndOf="parent"
@@ -124,26 +124,16 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/dash_panel"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/connect_panel"
-        app:layout_constraintBottom_toTopOf="@id/debug_text">
-
-        <Button
-            android:id="@+id/test_button"
-            android:layout_width="wrap_content"
+        <androidx.compose.ui.platform.ComposeView
+            android:id="@+id/compose_view"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Send test"
-            android:textAppearance="@style/TextAppearance.AppCompat.Headline"
+            android:layout_margin="@dimen/default_margin"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            android:layout_margin="@dimen/default_margin"/>
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/connect_panel"
+            app:layout_constraintBottom_toTopOf="@id/debug_text"/>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <TextView
         android:id="@+id/debug_text"

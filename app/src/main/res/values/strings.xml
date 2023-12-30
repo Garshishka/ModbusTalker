@@ -4,4 +4,11 @@
     <string name="disconnect">Disconnect</string>
     <string name="ip_label">IP:</string>
     <string name="port_label">Port:</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="choose_register">Register to watch</string>
+    <string name="choose_register_msg">Input the address of register to watch</string>
+    <string name="not_numerical">Inputted text in not a number!</string>
+    <string name="base_ip">10.0.2.2</string>
+    <string name="base_port">502</string>
 </resources>
