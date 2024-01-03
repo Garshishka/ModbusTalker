@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id ("org.jetbrains.kotlin.kapt")
 }
 
 android {
@@ -72,6 +73,11 @@ dependencies {
     implementation("io.ktor:ktor-network:2.3.7")
     implementation ("com.github.kirich1409:viewbindingpropertydelegate-full:1.5.9")
     implementation("androidx.compose.runtime:runtime-livedata:1.5.4")
+    implementation ("androidx.lifecycle:lifecycle-livedata-ktx:2.6.2")
+    implementation ("androidx.room:room-runtime:2.6.1")
+    implementation ("androidx.room:room-ktx:2.6.1")
+    kapt ("androidx.room:room-common:2.6.1")
+    kapt ("androidx.room:room-compiler:2.6.1")
 
     androidTestImplementation(platform("androidx.compose:compose-bom:2023.03.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")

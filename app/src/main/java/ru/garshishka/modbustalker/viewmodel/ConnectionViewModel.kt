@@ -1,9 +1,10 @@
-package ru.garshishka.modbustalker
+package ru.garshishka.modbustalker.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import io.ktor.network.selector.SelectorManager
 import io.ktor.network.sockets.Socket
@@ -17,19 +18,22 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import ru.garshishka.modbustalker.data.RegisterOutput
+import ru.garshishka.modbustalker.data.RegistryOutputRepository
 import ru.garshishka.modbustalker.utils.ConnectionStatus
-import ru.garshishka.modbustalker.utils.makeByteList
+import ru.garshishka.modbustalker.utils.makeByteArrayForAnalogueOut
+import ru.garshishka.modbustalker.utils.read2BytesOutput
 
-class ConnectionViewModel : ViewModel() {
-    private val _connectionStatus = MutableLiveData<ConnectionStatus>()
+class ConnectionViewModel(private val repository: RegistryOutputRepository) : ViewModel() {
+    private val _connectionStatus = MutableLiveData(ConnectionStatus.DISCONNECTED)
     val connectionStatus: LiveData<ConnectionStatus>
         get() = _connectionStatus
 
-    private val _readStatus = MutableLiveData<ConnectionStatus>()
+    private val _readStatus = MutableLiveData(ConnectionStatus.DISCONNECTED)
     val readStatus: LiveData<ConnectionStatus>
         get() = _readStatus
 
-    private val _writeStatus = MutableLiveData<ConnectionStatus>()
+    private val _writeStatus = MutableLiveData(ConnectionStatus.DISCONNECTED)
     val writeStatus: LiveData<ConnectionStatus>
         get() = _writeStatus
 
@@ -37,9 +41,8 @@ class ConnectionViewModel : ViewModel() {
     val debugText: LiveData<String>
         get() = _debugText
 
-    private val _numberOfRegisters = MutableLiveData<Int>()
-    val numberOfRegisters: LiveData<Int>
-        get() = _numberOfRegisters
+    val watchedRegisters: LiveData<List<RegisterOutput>> =
+        repository.getAll().map { list -> list.map {it.toDto() } }
 
     private val selectorManager = SelectorManager(Dispatchers.IO)
     private lateinit var socket: Socket
@@ -47,11 +50,7 @@ class ConnectionViewModel : ViewModel() {
     private lateinit var sendChannel: ByteWriteChannel
 
     init {
-        _connectionStatus.value = ConnectionStatus.DISCONNECTED
-        _readStatus.value = ConnectionStatus.DISCONNECTED
-        _writeStatus.value = ConnectionStatus.DISCONNECTED
         _debugText.value = ""
-        _numberOfRegisters.value = 0
     }
 
     fun connect(ip: String, port: String) = viewModelScope.launch {
@@ -100,6 +99,7 @@ class ConnectionViewModel : ViewModel() {
                 _connectionStatus,
                 ConnectionStatus.DISCONNECTED
             )
+            repository.deleteAll()
             _readStatus.value = ConnectionStatus.DISCONNECTED
             _writeStatus.value = ConnectionStatus.DISCONNECTED
         } catch (e: Exception) {
@@ -108,12 +108,12 @@ class ConnectionViewModel : ViewModel() {
         }
     }
 
-    fun send(registryAddress: Int) = viewModelScope.launch {
+    fun send(registerAddress: Int) = viewModelScope.launch {
         val amountToCheck = 1
-        logDebug("watching $amountToCheck registry from $registryAddress")
-        val packet = makeByteArrayForAnalogueOut(registryAddress, 1)
+        val output = RegisterOutput(registerAddress, -1, 1)
+        logDebug("watching $amountToCheck registry from $registerAddress")
+        val packet = makeByteArrayForAnalogueOut(registerAddress, 1)
         try {
-            var firstSend = true
             //_writeStatus.value = ConnectionStatus.WORKING
             while (true) {
                 sendChannel.writeFully(packet, 0, packet.size)
@@ -124,10 +124,8 @@ class ConnectionViewModel : ViewModel() {
                 var outputString = ""
                 response.forEach { outputString += "${it.toUByte()}, " }
                 logResponse(outputString)
-                if (firstSend) {
-                    _numberOfRegisters.value = _numberOfRegisters.value!! + 1
-                    firstSend = false
-                }
+                output.value = response.read2BytesOutput()
+                repository.save(output)
                 delay(1000)
             }
         } catch (e: Exception) {
@@ -162,25 +160,4 @@ class ConnectionViewModel : ViewModel() {
         Log.e("ModBus", message)
         _debugText.value = "!ERROR! $message\n" + _debugText.value
     }
-
-    private fun makeByteArrayForAnalogueOut(registryAddress: Int, amountToCheck: Int): ByteArray {
-        val identifier = 1
-        val messageLength = 0x06
-        val deviceAddress = 0x01
-        val function = 0x03
-
-        val list = identifier.makeByteList() +
-                listOf(
-                    0x00,
-                    0x00,
-                    0x00,
-                    messageLength,
-                    deviceAddress,
-                    function,
-                ) + registryAddress.makeByteList() + amountToCheck.makeByteList()
-        return byteArrayFromHex(list)
-    }
-
-    private fun byteArrayFromHex(numbers: List<Int>) =//vararg ints: Int) =
-        ByteArray(numbers.size) { pos -> numbers[pos].toByte() }
 }

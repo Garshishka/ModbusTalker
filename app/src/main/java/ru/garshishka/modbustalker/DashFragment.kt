@@ -28,14 +28,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import by.kirich1409.viewbindingdelegate.CreateMethod
 import by.kirich1409.viewbindingdelegate.viewBinding
 import ru.garshishka.modbustalker.databinding.FragmentDashBinding
+import ru.garshishka.modbustalker.di.DependencyContainer
 import ru.garshishka.modbustalker.utils.ConnectionStatus
+import ru.garshishka.modbustalker.viewmodel.ConnectionViewModel
+import ru.garshishka.modbustalker.viewmodel.ViewModelFactory
 
 class DashFragment : Fragment() {
-    private val viewModel: ConnectionViewModel by activityViewModels()
+    //Dependency part
+    private val container = DependencyContainer.getInstance()
+
+    private val viewModel: ConnectionViewModel by viewModels {
+        ViewModelFactory(container.repository)
+    }
     private val binding: FragmentDashBinding by viewBinding(createMethod = CreateMethod.INFLATE)
 
     override fun onCreateView(
@@ -93,7 +101,7 @@ class DashFragment : Fragment() {
 
     @Composable
     fun SetCompose() {
-        val numberOfRegisters = viewModel.numberOfRegisters.observeAsState().value
+        val watchedRegisters = viewModel.watchedRegisters.observeAsState().value
         Column {
             Button(
                 onClick = {
@@ -103,27 +111,36 @@ class DashFragment : Fragment() {
             }
             LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 60.dp), content =
             {
-                items(numberOfRegisters!!) {
-                    Card(
-                        modifier = Modifier
-                            .padding(4.dp)
-                            .fillMaxWidth(),
-                    ) {
-                        Text(
-                            text = "added",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            color = Color(0xFFFFFFFF),
-                            textAlign = TextAlign.Start,
-                            modifier = Modifier.padding(8.dp)
-                        )
+                watchedRegisters?.let {
+                    items(it.size) {num ->
+                            Card(
+                                modifier = Modifier
+                                    .padding(4.dp)
+                                    .fillMaxWidth(),
+                            ) {
+                                Text(
+                                    text = it[num].address.toString(),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    color = Color(0x33333333),
+                                    textAlign = TextAlign.Start,
+                                    modifier = Modifier.padding(8.dp)
+                                )
+                                Text(
+                                    text = it[num].value.toString(),
+                                    fontSize = 16.sp,
+                                    color = Color(0x55555555),
+                                    textAlign = TextAlign.Start,
+                                    modifier = Modifier.padding(8.dp)
+                                )
+                            }
                     }
                 }
             })
         }
     }
 
-    private fun chooseRegisterToWatch(){
+    private fun chooseRegisterToWatch() {
         val inputEditTextField = EditText(requireActivity())
         val dialog = AlertDialog.Builder(requireContext())
             .setTitle(R.string.choose_register)
@@ -131,10 +148,10 @@ class DashFragment : Fragment() {
             .setView(inputEditTextField)
             .setPositiveButton(R.string.ok) { _, _ ->
                 val editTextInput = inputEditTextField.text.toString().toIntOrNull()
-                if(editTextInput == null){
-                    Log.e("UI","Not numerical address")
+                if (editTextInput == null) {
+                    Log.e("UI", "Not numerical address")
                     showToast(R.string.not_numerical)
-                } else{
+                } else {
                     viewModel.send(editTextInput)
                 }
             }
@@ -143,8 +160,8 @@ class DashFragment : Fragment() {
         dialog.show()
     }
 
-    private fun showToast(stringResource: Int){
-        Toast.makeText(requireContext(),stringResource,Toast.LENGTH_LONG)
+    private fun showToast(stringResource: Int) {
+        Toast.makeText(requireContext(), stringResource, Toast.LENGTH_LONG)
             .show()
     }
 
