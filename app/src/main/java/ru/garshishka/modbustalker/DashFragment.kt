@@ -86,14 +86,18 @@ class DashFragment : Fragment() {
                     }
                 }
             }
-            readStatus.observe(viewLifecycleOwner) {
-                changeColorDueToStatusChange(it, binding.readIcon)
-            }
-            writeStatus.observe(viewLifecycleOwner) {
-                changeColorDueToStatusChange(it, binding.writeIcon)
+            communicatingStatus.observe(viewLifecycleOwner) {
+                changeColorDueToStatusChange(it, binding.communicatingIcon)
             }
             debugText.observe(viewLifecycleOwner) {
                 binding.debugText.text = it
+            }
+            registerWatchError.observe(viewLifecycleOwner) {
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.register_watch_error, it),
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
         return binding.root
@@ -112,28 +116,28 @@ class DashFragment : Fragment() {
             LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 60.dp), content =
             {
                 watchedRegisters?.let {
-                    items(it.size) {num ->
-                            Card(
-                                modifier = Modifier
-                                    .padding(4.dp)
-                                    .fillMaxWidth(),
-                            ) {
-                                Text(
-                                    text = it[num].address.toString(),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    color = Color(0x33333333),
-                                    textAlign = TextAlign.Start,
-                                    modifier = Modifier.padding(8.dp)
-                                )
-                                Text(
-                                    text = it[num].value.toString(),
-                                    fontSize = 16.sp,
-                                    color = Color(0x55555555),
-                                    textAlign = TextAlign.Start,
-                                    modifier = Modifier.padding(8.dp)
-                                )
-                            }
+                    items(it.size) { num ->
+                        Card(
+                            modifier = Modifier
+                                .padding(4.dp)
+                                .fillMaxWidth(),
+                        ) {
+                            Text(
+                                text = it[num].address.toString(),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = Color(0xFF333333),
+                                textAlign = TextAlign.Start,
+                                modifier = Modifier.padding(8.dp)
+                            )
+                            Text(
+                                text = it[num].value?.toString() ?: "",
+                                fontSize = 16.sp,
+                                color = Color(0xFF333333),
+                                textAlign = TextAlign.Start,
+                                modifier = Modifier.padding(8.dp)
+                            )
+                        }
                     }
                 }
             })
@@ -152,7 +156,13 @@ class DashFragment : Fragment() {
                     Log.e("UI", "Not numerical address")
                     showToast(R.string.not_numerical)
                 } else {
-                    viewModel.send(editTextInput)
+                    if (viewModel.checkRegisterByAddress(editTextInput)){
+                        Toast.makeText(requireContext(),
+                            getString(R.string.register_already_watched, editTextInput.toString()),
+                            Toast.LENGTH_SHORT).show()
+                    } else {
+                        viewModel.addWatchedRegister(editTextInput)
+                    }
                 }
             }
             .setNegativeButton(R.string.cancel, null)

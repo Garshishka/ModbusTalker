@@ -8,7 +8,7 @@ import ru.garshishka.modbustalker.data.RegisterOutput
 data class RegisterOutputEntity(
     @PrimaryKey
     val address: Int,
-    var value: Int,
+    val value: Int?,
     val transactionNumber: Int,
 ) {
     fun toDto() = RegisterOutput(address, value, transactionNumber)

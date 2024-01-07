@@ -13,6 +13,11 @@ interface RegisterOutputDao {
     @Upsert
     suspend fun save(output: RegisterOutputEntity)
 
+    @Query("SELECT * FROM registers_output_table WHERE transactionNumber =:transactionNumber")
+    fun findByTransactionNumber(transactionNumber: Int): RegisterOutputEntity?
+    @Query("SELECT * FROM registers_output_table WHERE address =:address")
+    fun findByAddress(address: Int): RegisterOutputEntity?
+
     @Query("DELETE FROM registers_output_table WHERE address = :address")
     fun deleteById(address: Int)
 

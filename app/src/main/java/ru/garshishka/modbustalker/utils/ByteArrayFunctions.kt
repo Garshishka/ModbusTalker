@@ -3,13 +3,16 @@ package ru.garshishka.modbustalker.utils
 fun byteArrayFromHex(numbers: List<Int>) =
     ByteArray(numbers.size) { pos -> numbers[pos].toByte() }
 
-fun makeByteArrayForAnalogueOut(registryAddress: Int, amountToCheck: Int): ByteArray {
-    val identifier = 1
+fun makeByteArrayForAnalogueOut(
+    registryAddress: Int,
+    amountToCheck: Int,
+    transactionNum: UShort
+): ByteArray {
     val messageLength = 0x06
     val deviceAddress = 0x01
     val function = 0x03
 
-    val list = identifier.makeByteList() +
+    val list = transactionNum.toInt().makeByteList() +
             listOf(
                 0x00,
                 0x00,
@@ -21,14 +24,25 @@ fun makeByteArrayForAnalogueOut(registryAddress: Int, amountToCheck: Int): ByteA
     return byteArrayFromHex(list)
 }
 
-fun ByteArray.read2BytesOutput(): Int =
-    (this[this.size - 2].toInt() and 0xff shl 8) or
-            (this[this.size - 1].toInt() and 0xff)
+fun ByteArray.getTransactionNumberAndOutput(fourByte : Boolean = false): Pair<Int, Int> =
+    if(fourByte){
+        (this.read2BytesFromBuffer(0) to this.read4BytesFromBuffer(this.size - 4))
+    } else (this.read2BytesFromBuffer(0) to this.read2BytesFromBuffer(this.size - 2))
 
+fun ByteArray.read2BytesFromBuffer(offset: Int): Int =
+    (this[offset + 0].toInt() and 0xff shl 8) or
+            (this[offset + 1].toInt() and 0xff)
 
-private fun read4BytesFromBuffer(buffer: ByteArray, offset: Int): Int {
-    return (buffer[offset + 3].toInt() shl 24) or
-            (buffer[offset + 2].toInt() and 0xff shl 16) or
-            (buffer[offset + 1].toInt() and 0xff shl 8) or
-            (buffer[offset + 0].toInt() and 0xff)
-}
+fun ByteArray.read4BytesFromBuffer(offset: Int): Int =
+    (this[offset + 3].toInt() shl 24) or
+            (this[offset + 2].toInt() and 0xff shl 16) or
+            (this[offset + 1].toInt() and 0xff shl 8) or
+            (this[offset + 0].toInt() and 0xff)
+
+fun Int.makeByteList(): List<Int> =
+    if (this > 16) {
+        val hex = this.toString(16)
+        listOf(hex.substring(0, 1).toInt(16), hex.substring(1, 2).toInt(16))
+    } else {
+        listOf(0x00, this)
+    }

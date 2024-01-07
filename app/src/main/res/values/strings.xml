@@ -11,4 +11,6 @@
     <string name="not_numerical">Inputted text in not a number!</string>
     <string name="base_ip">10.0.2.2</string>
     <string name="base_port">502</string>
+    <string name="register_watch_error">Register watch error: %1$s</string>
+    <string name="register_already_watched">Register %1$s already watched!</string>
 </resources>

@@ -93,33 +93,21 @@
             android:src="@drawable/signal_disconnected_24"
             app:layout_constraintTop_toTopOf="@id/connect_button"
             app:layout_constraintBottom_toBottomOf="@id/connect_button"
-            app:layout_constraintEnd_toStartOf="@id/read_icon"
+            app:layout_constraintEnd_toStartOf="@id/communicating_icon"
             app:layout_constraintStart_toEndOf="@id/connect_button"
             app:layout_constraintHorizontal_chainStyle="packed"
             />
         <ImageView
-            android:id="@+id/read_icon"
+            android:id="@+id/communicating_icon"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             style="@style/StatusIcon"
-            android:src="@drawable/signal_read_24"
-            android:layout_marginHorizontal="@dimen/default_margin"
-            app:layout_constraintTop_toTopOf="@id/connect_button"
-            app:layout_constraintBottom_toBottomOf="@id/connect_button"
-            app:layout_constraintEnd_toStartOf="@id/write_icon"
-            app:layout_constraintStart_toEndOf="@id/connection_icon"
-            />
-        <ImageView
-            android:id="@+id/write_icon"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            style="@style/StatusIcon"
-            android:src="@drawable/signal_write_24"
+            android:src="@drawable/communicating_24"
             android:layout_marginHorizontal="@dimen/default_margin"
             app:layout_constraintTop_toTopOf="@id/connect_button"
             app:layout_constraintBottom_toBottomOf="@id/connect_button"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@id/read_icon"
+            app:layout_constraintStart_toEndOf="@id/connection_icon"
             />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
@@ -127,7 +115,7 @@
         <androidx.compose.ui.platform.ComposeView
             android:id="@+id/compose_view"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:layout_margin="@dimen/default_margin"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
