@@ -122,7 +122,6 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
 
     private fun sendingAndReadingMessages() = viewModelScope.launch {
         while (sendingAndReading) {
-            logDebug("seng")
             byteArraysToSend.forEach { message ->
                 val transactionNumber = message.read2BytesFromBuffer(0)
                 try {
@@ -198,6 +197,15 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
                 delay(100)
             }
         }*/
+
+
+    fun deleteWatchedRegister(registerToDeleteNumber: Int) = viewModelScope.launch {
+        watchedRegisters.value?.let { list ->
+            val registerToDelete = list[registerToDeleteNumber]
+            byteArraysToSend.removeIf { it.getTransactionNumberAndOutput().first == registerToDelete.transactionNumber }
+            repository.delete(registerToDelete.address)
+        }
+    }
 
     private fun changeStatusOfConnection(
         message: String,

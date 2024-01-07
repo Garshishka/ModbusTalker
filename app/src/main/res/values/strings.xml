@@ -13,4 +13,6 @@
     <string name="base_port">502</string>
     <string name="register_watch_error">Register watch error: %1$s</string>
     <string name="register_already_watched">Register %1$s already watched!</string>
+    <string name="delete_register_title">Delete register?</string>
+    <string name="delete_register_text">Are you sure you want to delete this register?</string>
 </resources>

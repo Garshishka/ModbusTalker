@@ -11,17 +11,23 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -113,30 +119,46 @@ class DashFragment : Fragment() {
                 }) {
                 Text(text = "Add", fontSize = 20.sp)
             }
-            LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 60.dp), content =
+            LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 100.dp), content =
             {
                 watchedRegisters?.let {
                     items(it.size) { num ->
                         Card(
+                            elevation = CardDefaults.cardElevation(),
                             modifier = Modifier
                                 .padding(4.dp)
                                 .fillMaxWidth(),
                         ) {
-                            Text(
-                                text = it[num].address.toString(),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                color = Color(0xFF333333),
-                                textAlign = TextAlign.Start,
-                                modifier = Modifier.padding(8.dp)
-                            )
-                            Text(
-                                text = it[num].value?.toString() ?: "",
-                                fontSize = 16.sp,
-                                color = Color(0xFF333333),
-                                textAlign = TextAlign.Start,
-                                modifier = Modifier.padding(8.dp)
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = { deleteWatchedRegister(num) },
+                                    modifier = Modifier
+                                        .padding(4.dp)
+                                        .weight(0.75f)
+                                ) {
+                                    Icon(
+                                        painterResource(id = R.drawable.delete_24),
+                                        contentDescription = "Delete"
+                                    )
+                                }
+                                Column(modifier = Modifier.weight(1.25f)) {
+                                    Text(
+                                        text = it[num].address.toString(),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp,
+                                        color = Color(0xFF333333),
+                                        textAlign = TextAlign.Start,
+                                        modifier = Modifier.padding(8.dp)
+                                    )
+                                    Text(
+                                        text = it[num].value?.toString() ?: "",
+                                        fontSize = 16.sp,
+                                        color = Color(0xFF333333),
+                                        textAlign = TextAlign.Start,
+                                        modifier = Modifier.padding(8.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -156,14 +178,28 @@ class DashFragment : Fragment() {
                     Log.e("UI", "Not numerical address")
                     showToast(R.string.not_numerical)
                 } else {
-                    if (viewModel.checkRegisterByAddress(editTextInput)){
-                        Toast.makeText(requireContext(),
+                    if (viewModel.checkRegisterByAddress(editTextInput)) {
+                        Toast.makeText(
+                            requireContext(),
                             getString(R.string.register_already_watched, editTextInput.toString()),
-                            Toast.LENGTH_SHORT).show()
+                            Toast.LENGTH_SHORT
+                        ).show()
                     } else {
                         viewModel.addWatchedRegister(editTextInput)
                     }
                 }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .create()
+        dialog.show()
+    }
+
+    private fun deleteWatchedRegister(registerNumberInGrid: Int) {
+        val dialog = AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.delete_register_title))
+            .setMessage(getString(R.string.delete_register_text))
+            .setPositiveButton(R.string.ok) { _, _ ->
+                        viewModel.deleteWatchedRegister(registerNumberInGrid)
             }
             .setNegativeButton(R.string.cancel, null)
             .create()
