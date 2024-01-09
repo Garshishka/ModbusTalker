@@ -24,10 +24,19 @@ fun makeByteArrayForAnalogueOut(
     return byteArrayFromHex(list)
 }
 
-fun ByteArray.getTransactionNumberAndOutput(fourByte : Boolean = false): Pair<Int, Int> =
-    if(fourByte){
-        (this.read2BytesFromBuffer(0) to this.read4BytesFromBuffer(this.size - 4))
-    } else (this.read2BytesFromBuffer(0) to this.read2BytesFromBuffer(this.size - 2))
+fun ByteArray.getTransactionAndFunctionNumber(): Pair<Int, Int> =
+        (this.read2BytesFromBuffer(0) to this.read1ByteFromBuffer(7))
+
+
+fun ByteArray.getOutput(fourByte: Boolean = false): Int =
+    if (fourByte) {
+        this.read4BytesFromBuffer(this.size - 4)
+    } else {
+        this.read2BytesFromBuffer(this.size - 2)
+    }
+
+fun ByteArray.read1ByteFromBuffer(offset: Int): Int =
+    this[offset].toInt() and 0xff
 
 fun ByteArray.read2BytesFromBuffer(offset: Int): Int =
     (this[offset + 0].toInt() and 0xff shl 8) or
