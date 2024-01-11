@@ -28,7 +28,6 @@ import ru.garshishka.modbustalker.utils.getTransactionAndFunctionNumber
 import ru.garshishka.modbustalker.utils.makeByteArrayForAnalogueOut
 import ru.garshishka.modbustalker.utils.read1ByteFromBuffer
 import ru.garshishka.modbustalker.utils.read2BytesFromBuffer
-import ru.garshishka.modbustalker.utils.throwErrorFromErrorResponse
 
 class ConnectionViewModel(private val repository: RegistryOutputRepository) : ViewModel() {
     private val _connectionStatus = MutableLiveData(ConnectionStatus.DISCONNECTED)
@@ -49,6 +48,9 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
     private val _registerWatchError = SingleLiveEvent<String>()
     val registerWatchError: LiveData<String>
         get() = _registerWatchError
+    private val _registerResponseError = SingleLiveEvent<Int>()
+    val registerResponseError: LiveData<Int>
+        get() = _registerResponseError
 
     private val byteArraysToSend: MutableList<ByteArray> = mutableListOf()
     private var transactionNumber: UShort = 0u
@@ -153,9 +155,9 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
                             } else {
                                 byteArraysToSend.remove(message)
                                 if (checkIfErrorNumber(functionNumber, output.second)) {
-                                    throwErrorFromErrorResponse(response)
+                                    throw ResponseErrorException(message.read1ByteFromBuffer(8))
                                 } else {
-                                    throw ResponseErrorException("Not the right function number and not an error")
+                                    throw ResponseErrorException(-1)
                                 }
                             }
                         } else {
@@ -171,7 +173,7 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
                 catch (e: ResponseErrorException) {
                     logError("Error response $e")
                     logError(e.message.toString())
-                    _registerWatchError.postValue(e.message ?: e.toString())
+                    _registerResponseError.postValue(e.errorCode)
                 } catch (e: Exception) {
                     logError("Error sending or receiving $e")
                     logError(e.message.toString())

@@ -15,4 +15,15 @@
     <string name="register_already_watched">Register %1$s already watched!</string>
     <string name="delete_register_title">Delete register?</string>
     <string name="delete_register_text">Are you sure you want to delete this register?</string>
+    <string name="error_response_1">Error %1$i: Illegal function code</string>
+    <string name="error_response_2">Error %1$i: Illegal data address</string>
+    <string name="error_response_3">Error %1$i: Illegal data value</string>
+    <string name="error_response_4">Error %1$i: Slave device failure</string>
+    <string name="error_response_5">Error %1$i: Request accepted and processing, but it will take a long time</string>
+    <string name="error_response_6">Error %1$i: The slave is busy processing. Repeat later</string>
+    <string name="error_response_7">Error %1$i: The slave can not execute the program function specified</string>
+    <string name="error_response_8">Error %1$i: The slave detected a parity error when reading the extended memory</string>
+    <string name="error_response_10">Error %1$i: Gateway Path Unavailable. Gateway is misconfigured or overloaded</string>
+    <string name="error_response_11">Error %1$i: Gateway target device failed to respond</string>
+    <string name="error_response_unknown">Error: Unknown error</string>
 </resources>
