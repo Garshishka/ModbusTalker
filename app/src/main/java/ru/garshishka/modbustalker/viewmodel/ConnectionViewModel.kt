@@ -20,9 +20,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import ru.garshishka.modbustalker.data.RegisterOutput
 import ru.garshishka.modbustalker.data.RegistryOutputRepository
-import ru.garshishka.modbustalker.utils.ConnectionStatus
-import ru.garshishka.modbustalker.utils.ResponseErrorException
+import ru.garshishka.modbustalker.data.enums.ConnectionStatus
+import ru.garshishka.modbustalker.data.enums.OutputType
 import ru.garshishka.modbustalker.utils.SingleLiveEvent
+import ru.garshishka.modbustalker.utils.errors.ResponseErrorException
 import ru.garshishka.modbustalker.utils.getOutput
 import ru.garshishka.modbustalker.utils.getTransactionAndFunctionNumber
 import ru.garshishka.modbustalker.utils.makeByteArrayForAnalogueOut
@@ -113,13 +114,14 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
         }
     }
 
-    fun addWatchedRegister(registerAddress: Int) = viewModelScope.launch {
+    fun addWatchedRegister(registerAddress: Int, outputType: OutputType) = viewModelScope.launch {
         byteArraysToSend.add(makeByteArrayForAnalogueOut(registerAddress, 1, transactionNumber))
         beginSendingAndReceivingMessages()
         repository.save(
             RegisterOutput(
                 registerAddress,
-                transactionNumber = transactionNumber.toInt()
+                transactionNumber = transactionNumber.toInt(),
+                outputType = outputType,
             )
         )
         logDebug("added register $registerAddress with transaction $transactionNumber to watch")

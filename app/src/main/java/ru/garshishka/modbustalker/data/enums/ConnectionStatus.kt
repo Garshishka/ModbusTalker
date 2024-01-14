@@ -1,4 +1,4 @@
-package ru.garshishka.modbustalker.utils
+package ru.garshishka.modbustalker.data.enums
 
 enum class ConnectionStatus {
     DISCONNECTED, CONNECTED, WORKING

@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.RadioGroup
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,9 +38,10 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import by.kirich1409.viewbindingdelegate.CreateMethod
 import by.kirich1409.viewbindingdelegate.viewBinding
+import ru.garshishka.modbustalker.data.enums.ConnectionStatus
+import ru.garshishka.modbustalker.data.enums.OutputType
 import ru.garshishka.modbustalker.databinding.FragmentDashBinding
 import ru.garshishka.modbustalker.di.DependencyContainer
-import ru.garshishka.modbustalker.utils.ConnectionStatus
 import ru.garshishka.modbustalker.viewmodel.ConnectionViewModel
 import ru.garshishka.modbustalker.viewmodel.ViewModelFactory
 
@@ -98,7 +100,7 @@ class DashFragment : Fragment() {
             debugText.observe(viewLifecycleOwner) {
                 binding.debugText.text = it
             }
-            registerResponseError.observe(viewLifecycleOwner){
+            registerResponseError.observe(viewLifecycleOwner) {
                 showResponseErrorToast(it)
             }
             registerWatchError.observe(viewLifecycleOwner) {
@@ -170,13 +172,16 @@ class DashFragment : Fragment() {
     }
 
     private fun chooseRegisterToWatch() {
-        val inputEditTextField = EditText(requireActivity())
+        val dialogView = requireActivity().layoutInflater.inflate(
+            R.layout.register_to_watch_dialog, null
+        )
+        val radioGroup = dialogView.findViewById<RadioGroup>(R.id.type_radio_group)
         val dialog = AlertDialog.Builder(requireContext())
             .setTitle(R.string.choose_register)
             .setMessage(R.string.choose_register_msg)
-            .setView(inputEditTextField)
+            .setView(dialogView)
             .setPositiveButton(R.string.ok) { _, _ ->
-                val editTextInput = inputEditTextField.text.toString().toIntOrNull()
+                val editTextInput = dialogView.findViewById<EditText>(R.id.choose_register).text.toString().toIntOrNull()
                 if (editTextInput == null) {
                     Log.e("UI", "Not numerical address")
                     showToast(R.string.not_numerical)
@@ -184,11 +189,13 @@ class DashFragment : Fragment() {
                     if (viewModel.checkRegisterByAddress(editTextInput)) {
                         Toast.makeText(
                             requireContext(),
-                            getString(R.string.register_already_watched, editTextInput.toString()),
+                            getString(R.string.register_already_watched, editTextInput),
                             Toast.LENGTH_SHORT
                         ).show()
                     } else {
-                        viewModel.addWatchedRegister(editTextInput)
+                        //TODO remove this log
+                        Log.d("OUTPUT TYPE","output type is ${getOutputType(radioGroup.checkedRadioButtonId)}")
+                        viewModel.addWatchedRegister(editTextInput, getOutputType(radioGroup.checkedRadioButtonId))
                     }
                 }
             }
@@ -202,7 +209,7 @@ class DashFragment : Fragment() {
             .setTitle(getString(R.string.delete_register_title))
             .setMessage(getString(R.string.delete_register_text))
             .setPositiveButton(R.string.ok) { _, _ ->
-                        viewModel.deleteWatchedRegister(registerNumberInGrid)
+                viewModel.deleteWatchedRegister(registerNumberInGrid)
             }
             .setNegativeButton(R.string.cancel, null)
             .create()
@@ -214,8 +221,18 @@ class DashFragment : Fragment() {
             .show()
     }
 
+    private fun getOutputType(buttonId: Int): OutputType =
+        when(buttonId){
+            R.id.radio_uint16 -> OutputType.UINT16
+            R.id.radio_int16 -> OutputType.INT16
+            R.id.radio_int32 -> OutputType.INT32
+            R.id.radio_real32 -> OutputType.REAL32
+            else -> OutputType.INT16
+        }
+
+
     private fun showResponseErrorToast(errorCode: Int?) {
-        val errorMessage = when(errorCode){
+        val errorMessage = when (errorCode) {
             1 -> getString(R.string.error_response_1, errorCode)
             2 -> getString(R.string.error_response_2, errorCode)
             3 -> getString(R.string.error_response_3, errorCode)
