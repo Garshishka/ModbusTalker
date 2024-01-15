@@ -1,6 +1,9 @@
 package ru.garshishka.modbustalker.utils
 
-fun byteArrayFromHex(numbers: List<Int>) =
+import ru.garshishka.modbustalker.data.enums.OutputType
+import java.nio.ByteBuffer
+
+fun byteArrayFromInts(numbers: List<Int>) =
     ByteArray(numbers.size) { pos -> numbers[pos].toByte() }
 
 fun makeByteArrayForAnalogueOut(
@@ -21,37 +24,43 @@ fun makeByteArrayForAnalogueOut(
                 deviceAddress,
                 function,
             ) + registryAddress.makeByteList() + amountToCheck.makeByteList()
-    return byteArrayFromHex(list)
+    return byteArrayFromInts(list)
 }
 
-fun ByteArray.getTransactionAndFunctionNumber(): Pair<Int, Int> =
-        (this.read2BytesFromBuffer(0) to this.read1ByteFromBuffer(7))
-
-
-fun ByteArray.getOutput(fourByte: Boolean = false): Int =
-    if (fourByte) {
-        this.read4BytesFromBuffer(this.size - 4)
-    } else {
-        this.read2BytesFromBuffer(this.size - 2)
+fun ByteArray.readBytes(offset: Int, outputType: OutputType = OutputType.UINT16): Number =
+    when(outputType){
+        OutputType.UINT16 -> ByteBuffer.wrap(this,offset,2).short.toUShort().toInt()
+        OutputType.INT16 -> ByteBuffer.wrap(this,offset,2).short.toInt()
+        OutputType.INT32 -> ByteBuffer.wrap(this,offset,4).int
+        OutputType.REAL32 -> ByteBuffer.wrap(this,offset,4).float
     }
+
+
+fun ByteArray.getTransactionAndFunctionNumber(): Pair<Int, Int> =
+    (this.readBytes(0,OutputType.UINT16).toInt() to this.read1ByteFromBuffer(7))
 
 fun ByteArray.read1ByteFromBuffer(offset: Int): Int =
     this[offset].toInt() and 0xff
 
-fun ByteArray.read2BytesFromBuffer(offset: Int): Int =
-    (this[offset + 0].toInt() and 0xff shl 8) or
-            (this[offset + 1].toInt() and 0xff)
-
-fun ByteArray.read4BytesFromBuffer(offset: Int): Int =
-    (this[offset + 3].toInt() shl 24) or
-            (this[offset + 2].toInt() and 0xff shl 16) or
-            (this[offset + 1].toInt() and 0xff shl 8) or
-            (this[offset + 0].toInt() and 0xff)
 
 fun Int.makeByteList(): List<Int> =
-    if (this > 16) {
-        val hex = this.toString(16)
-        listOf(hex.substring(0, 1).toInt(16), hex.substring(1, 2).toInt(16))
-    } else {
-        listOf(0x00, this)
+    when{
+        (this>255) -> {
+            val hex = this.toString(16)
+            println(hex)
+            val length = hex.length
+            listOf(hex.substring(0, length-2).toInt(16), hex.substring(length-2, length).toInt(16))
+        }
+        (this>=0) ->{
+            listOf(0x00, this)
+        }
+        (this>-256) ->{
+            listOf(0xff,this)
+        }
+        else -> { //TODO check this part, probably wrong
+            val hex = this.toString(16)
+            println(hex)
+            val length = hex.length
+            listOf(hex.substring(0, length-2).toInt(16), hex.substring(length-2, length).toInt(16))
+        }
     }

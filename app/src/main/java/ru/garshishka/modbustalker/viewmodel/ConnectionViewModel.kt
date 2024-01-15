@@ -24,11 +24,10 @@ import ru.garshishka.modbustalker.data.enums.ConnectionStatus
 import ru.garshishka.modbustalker.data.enums.OutputType
 import ru.garshishka.modbustalker.utils.SingleLiveEvent
 import ru.garshishka.modbustalker.utils.errors.ResponseErrorException
-import ru.garshishka.modbustalker.utils.getOutput
 import ru.garshishka.modbustalker.utils.getTransactionAndFunctionNumber
 import ru.garshishka.modbustalker.utils.makeByteArrayForAnalogueOut
 import ru.garshishka.modbustalker.utils.read1ByteFromBuffer
-import ru.garshishka.modbustalker.utils.read2BytesFromBuffer
+import ru.garshishka.modbustalker.utils.readBytes
 
 class ConnectionViewModel(private val repository: RegistryOutputRepository) : ViewModel() {
     private val _connectionStatus = MutableLiveData(ConnectionStatus.DISCONNECTED)
@@ -131,7 +130,7 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
     private fun sendingAndReadingMessages() = viewModelScope.launch {
         while (sendingAndReading) {
             byteArraysToSend.forEach { message ->
-                val transactionNumber = message.read2BytesFromBuffer(0)
+                val transactionNumber = message.readBytes(0)
                 val functionNumber = message.read1ByteFromBuffer(7)
                 try {
                     _communicatingStatus.value = ConnectionStatus.WORKING
@@ -153,7 +152,11 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
                                 var outputString = ""
                                 response.forEach { outputString += "${it.toUByte()}, " }
                                 logResponse(outputString)
-                                repository.updateValue(output.first, response.getOutput())
+                                //TODO send it only byte array, in the repository function change outcome according to output type
+                                repository.updateValue(
+                                    output.first,
+                                    response.readBytes(response.size - 2).toInt()
+                                )
                             } else {
                                 byteArraysToSend.remove(message)
                                 if (checkIfErrorNumber(functionNumber, output.second)) {
