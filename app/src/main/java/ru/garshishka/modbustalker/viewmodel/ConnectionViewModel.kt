@@ -152,11 +152,7 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
                                 var outputString = ""
                                 response.forEach { outputString += "${it.toUByte()}, " }
                                 logResponse(outputString)
-                                //TODO send it only byte array, in the repository function change outcome according to output type
-                                repository.updateValue(
-                                    output.first,
-                                    response.readBytes(response.size - 2).toInt()
-                                )
+                                repository.updateValue(output.first, response)
                             } else {
                                 byteArraysToSend.remove(message)
                                 if (checkIfErrorNumber(functionNumber, output.second)) {

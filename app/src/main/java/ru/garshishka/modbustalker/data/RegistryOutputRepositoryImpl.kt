@@ -1,7 +1,9 @@
 package ru.garshishka.modbustalker.data
 
+import ru.garshishka.modbustalker.data.enums.OutputType
 import ru.garshishka.modbustalker.db.RegisterOutputDao
 import ru.garshishka.modbustalker.db.RegisterOutputEntity
+import ru.garshishka.modbustalker.utils.readBytes
 
 class RegistryOutputRepositoryImpl(private val dao: RegisterOutputDao) : RegistryOutputRepository {
     override fun getAll() = dao.getAll()
@@ -10,9 +12,13 @@ class RegistryOutputRepositoryImpl(private val dao: RegisterOutputDao) : Registr
         dao.save(RegisterOutputEntity.fromDto(output))
     }
 
-    override suspend fun updateValue(transactionNumber: Int, newValue: Int) {
+    override suspend fun updateValue(transactionNumber: Int, responseArray: ByteArray) {
+        //TODO update for 4 byte types
         dao.findByTransactionNumber(transactionNumber)?.let {
-            dao.save(it.copy(value = newValue))
+            val offset =
+                if (it.outputType == OutputType.UINT16 || it.outputType == OutputType.INT16)
+                    responseArray.size - 2 else responseArray.size - 4
+            dao.save(it.copy(value = responseArray.readBytes(offset,it.outputType).toInt()))
         }
     }
 

@@ -6,7 +6,7 @@ import ru.garshishka.modbustalker.db.RegisterOutputEntity
 interface RegistryOutputRepository {
     fun getAll() : LiveData<List<RegisterOutputEntity>>
     suspend fun save(output: RegisterOutput)
-    suspend fun updateValue(transactionNumber: Int, newValue: Int)
+    suspend fun updateValue(transactionNumber: Int, responseArray: ByteArray)
     suspend fun delete(addressToDelete: Int)
 
     fun checkRegisterByAddress(address: Int): Boolean
