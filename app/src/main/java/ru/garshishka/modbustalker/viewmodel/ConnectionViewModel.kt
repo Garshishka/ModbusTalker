@@ -156,7 +156,7 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
                             } else {
                                 byteArraysToSend.remove(message)
                                 if (checkIfErrorNumber(functionNumber, output.second)) {
-                                    throw ResponseErrorException(message.read1ByteFromBuffer(8))
+                                    throw ResponseErrorException(response.read1ByteFromBuffer(8))
                                 } else {
                                     throw ResponseErrorException(-1)
                                 }
