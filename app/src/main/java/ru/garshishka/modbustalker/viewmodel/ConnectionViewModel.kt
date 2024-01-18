@@ -23,6 +23,7 @@ import ru.garshishka.modbustalker.data.RegistryOutputRepository
 import ru.garshishka.modbustalker.data.enums.ConnectionStatus
 import ru.garshishka.modbustalker.data.enums.OutputType
 import ru.garshishka.modbustalker.utils.SingleLiveEvent
+import ru.garshishka.modbustalker.utils.errors.NotFoundTransactionNumberErrorException
 import ru.garshishka.modbustalker.utils.errors.ResponseErrorException
 import ru.garshishka.modbustalker.utils.getTransactionAndFunctionNumber
 import ru.garshishka.modbustalker.utils.makeByteArrayForAnalogueOut
@@ -45,11 +46,14 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
     val debugText: LiveData<String>
         get() = _debugText
 
+    private val _transactionNotFoundError = SingleLiveEvent<Int>()
+    val transactionNotFoundError: LiveData<Int>
+        get() = _transactionNotFoundError
     private val _registerWatchError = SingleLiveEvent<String>()
     val registerWatchError: LiveData<String>
         get() = _registerWatchError
-    private val _registerResponseError = SingleLiveEvent<Int>()
-    val registerResponseError: LiveData<Int>
+    private val _registerResponseError = SingleLiveEvent<Pair<Int, Int>>()
+    val registerResponseError: LiveData<Pair<Int, Int>>
         get() = _registerResponseError
 
     private val byteArraysToSend: MutableList<ByteArray> = mutableListOf()
@@ -114,7 +118,13 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
     }
 
     fun addWatchedRegister(registerAddress: Int, outputType: OutputType) = viewModelScope.launch {
-        byteArraysToSend.add(makeByteArrayForAnalogueOut(registerAddress, 1, transactionNumber))
+        byteArraysToSend.add(
+            makeByteArrayForAnalogueOut(
+                registerAddress,
+                if (outputType == OutputType.INT16 || outputType == OutputType.UINT16) 1 else 2,
+                transactionNumber
+            )
+        )
         beginSendingAndReceivingMessages()
         repository.save(
             RegisterOutput(
@@ -130,9 +140,11 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
     private fun sendingAndReadingMessages() = viewModelScope.launch {
         while (sendingAndReading) {
             byteArraysToSend.forEach { message ->
-                val transactionNumber = message.readBytes(0)
+                val transactionNumber = message.readBytes(0).toInt()
                 val functionNumber = message.read1ByteFromBuffer(7)
                 try {
+                    val watchedRegister = repository.findRegisterByTransaction(transactionNumber)
+
                     _communicatingStatus.value = ConnectionStatus.WORKING
                     sendChannel.writeFully(message, 0, message.size)
 
@@ -141,8 +153,12 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
                     //Waiting to receive a respond  with the same transaction number
                     //TODO made waitingForAnswer and timeout configurable
                     while (waitingForAnswer < 5 && !gotCorrectResponse) {
-                        //TODO check for 4 bytes responses also
-                        val response = ByteArray(9 + 2)
+                        val response = ByteArray(
+                            9 +
+                                    if (watchedRegister.outputType == OutputType.INT16
+                                        || watchedRegister.outputType == OutputType.UINT16
+                                    ) 2 else 4
+                        )
                         receiveChannel.readAvailable(response)
                         val output = response.getTransactionAndFunctionNumber()
                         if (output.first == transactionNumber) {
@@ -155,10 +171,14 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
                                 repository.updateValue(output.first, response)
                             } else {
                                 byteArraysToSend.remove(message)
+                                val registerNumber = watchedRegister.address
                                 if (checkIfErrorNumber(functionNumber, output.second)) {
-                                    throw ResponseErrorException(response.read1ByteFromBuffer(8))
+                                    throw ResponseErrorException(
+                                        response.read1ByteFromBuffer(8),
+                                        registerNumber
+                                    )
                                 } else {
-                                    throw ResponseErrorException(-1)
+                                    throw ResponseErrorException(-1, registerNumber)
                                 }
                             }
                         } else {
@@ -171,10 +191,15 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
                     }
                     _communicatingStatus.value = ConnectionStatus.CONNECTED
                 } //TODO add register number
-                catch (e: ResponseErrorException) {
+                catch (e: NotFoundTransactionNumberErrorException) {
+                    byteArraysToSend.remove(message)
+                    logError("Error transaction not found in DB $e")
+                    logError(e.message.toString())
+                    _transactionNotFoundError.postValue(e.transactionNumber)
+                } catch (e: ResponseErrorException) {
                     logError("Error response $e")
                     logError(e.message.toString())
-                    _registerResponseError.postValue(e.errorCode)
+                    _registerResponseError.postValue(e.errorCode to e.registerNumber)
                 } catch (e: Exception) {
                     logError("Error sending or receiving $e")
                     logError(e.message.toString())

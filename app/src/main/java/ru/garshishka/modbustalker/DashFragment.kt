@@ -101,7 +101,7 @@ class DashFragment : Fragment() {
                 binding.debugText.text = it
             }
             registerResponseError.observe(viewLifecycleOwner) {
-                showResponseErrorToast(it)
+                showResponseErrorToast(it.first, it.second)
             }
             registerWatchError.observe(viewLifecycleOwner) {
                 Toast.makeText(
@@ -109,6 +109,9 @@ class DashFragment : Fragment() {
                     getString(R.string.register_watch_error, it),
                     Toast.LENGTH_LONG
                 ).show()
+            }
+            transactionNotFoundError.observe(viewLifecycleOwner){
+                showToast(R.string.error_transaction_not_found)
             }
         }
         return binding.root
@@ -231,22 +234,22 @@ class DashFragment : Fragment() {
         }
 
 
-    private fun showResponseErrorToast(errorCode: Int?) {
+    private fun showResponseErrorToast(errorCode: Int?, registerNumber: Int) {
         val errorMessage = when (errorCode) {
-            1 -> getString(R.string.error_response_1, errorCode)
-            2 -> getString(R.string.error_response_2, errorCode)
-            3 -> getString(R.string.error_response_3, errorCode)
-            4 -> getString(R.string.error_response_4, errorCode)
+            1 -> getString(R.string.error_response_1, errorCode, registerNumber)
+            2 -> getString(R.string.error_response_2, errorCode, registerNumber)
+            3 -> getString(R.string.error_response_3, errorCode, registerNumber)
+            4 -> getString(R.string.error_response_4, errorCode, registerNumber)
             //TODO this one is not an error, should be taken out
-            5 -> getString(R.string.error_response_5, errorCode)
-            6 -> getString(R.string.error_response_6, errorCode)
+            5 -> getString(R.string.error_response_5, errorCode, registerNumber)
+            6 -> getString(R.string.error_response_6, errorCode, registerNumber)
             //TODO this one returns another answer with function codes 14 and 15, probably should be considered
-            7 -> getString(R.string.error_response_7, errorCode)
-            8 -> getString(R.string.error_response_8, errorCode)
-            10 -> getString(R.string.error_response_10, errorCode)
-            11 -> getString(R.string.error_response_11, errorCode)
+            7 -> getString(R.string.error_response_7, errorCode, registerNumber)
+            8 -> getString(R.string.error_response_8, errorCode, registerNumber)
+            10 -> getString(R.string.error_response_10, errorCode, registerNumber)
+            11 -> getString(R.string.error_response_11, errorCode, registerNumber)
 
-            else -> getString(R.string.error_response_unknown)
+            else -> getString(R.string.error_response_unknown, registerNumber)
         }
         Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG)
             .show()
