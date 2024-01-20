@@ -63,6 +63,7 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
         repository.getAll().map { list -> list.map { it.toDto() } }
 
     private var sendingAndReading = false
+    private var commandArrayBusy = false
 
     private val selectorManager = SelectorManager(Dispatchers.IO)
     private lateinit var socket: Socket
@@ -98,6 +99,8 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
     fun disconnect() = viewModelScope.launch {
         try {
             logDebug("Closing connection")
+            sendingAndReading = false
+            waitForCommandArrayToFree()
             _connectionStatus.value = ConnectionStatus.WORKING
             withContext(Dispatchers.IO) {
                 socket.close()
@@ -109,7 +112,6 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
             )
             //TODO For future probably no need
             repository.deleteAll()
-            sendingAndReading = false
             _communicatingStatus.value = ConnectionStatus.DISCONNECTED
         } catch (e: Exception) {
             logError("Disconnection error $e")
@@ -118,6 +120,7 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
     }
 
     fun addWatchedRegister(registerAddress: Int, outputType: OutputType) = viewModelScope.launch {
+        waitForCommandArrayToFree()
         byteArraysToSend.add(
             makeByteArrayForAnalogueOut(
                 registerAddress,
@@ -139,6 +142,7 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
 
     private fun sendingAndReadingMessages() = viewModelScope.launch {
         while (sendingAndReading) {
+            commandArrayBusy = true
             byteArraysToSend.forEach { message ->
                 val transactionNumber = message.readBytes(0).toInt()
                 val functionNumber = message.read1ByteFromBuffer(7)
@@ -207,6 +211,7 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
                     _registerWatchError.postValue(e.message ?: e.toString())
                 }
             }
+            commandArrayBusy = false
             //TODO made this delay configurable
             delay(500)
         }
@@ -215,6 +220,7 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
     fun deleteWatchedRegister(registerToDeleteNumber: Int) = viewModelScope.launch {
         watchedRegisters.value?.let { list ->
             val registerToDelete = list[registerToDeleteNumber]
+            waitForCommandArrayToFree()
             byteArraysToSend.removeIf { it.getTransactionAndFunctionNumber().first == registerToDelete.transactionNumber }
             repository.delete(registerToDelete.address)
         }
@@ -256,4 +262,9 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
 
     private fun checkIfErrorNumber(sent: Int, response: Int): Boolean =
         response - sent == 128
+
+    private suspend fun waitForCommandArrayToFree(){
+        while (commandArrayBusy)
+            delay(100)
+    }
 }

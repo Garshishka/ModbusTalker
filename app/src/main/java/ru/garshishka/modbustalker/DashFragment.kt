@@ -110,7 +110,7 @@ class DashFragment : Fragment() {
                     Toast.LENGTH_LONG
                 ).show()
             }
-            transactionNotFoundError.observe(viewLifecycleOwner){
+            transactionNotFoundError.observe(viewLifecycleOwner) {
                 showToast(R.string.error_transaction_not_found)
             }
         }
@@ -159,7 +159,9 @@ class DashFragment : Fragment() {
                                         modifier = Modifier.padding(8.dp)
                                     )
                                     Text(
-                                        text = it[num].value?.toString() ?: "",
+                                        text = if (it[num].outputType != OutputType.REAL32)
+                                            it[num].value?.toString() ?: ""
+                                        else it[num].valueFloat?.toString() ?: "",
                                         fontSize = 16.sp,
                                         color = Color(0xFF333333),
                                         textAlign = TextAlign.Start,
@@ -184,7 +186,9 @@ class DashFragment : Fragment() {
             .setMessage(R.string.choose_register_msg)
             .setView(dialogView)
             .setPositiveButton(R.string.ok) { _, _ ->
-                val editTextInput = dialogView.findViewById<EditText>(R.id.choose_register).text.toString().toIntOrNull()
+                val editTextInput =
+                    dialogView.findViewById<EditText>(R.id.choose_register).text.toString()
+                        .toIntOrNull()
                 if (editTextInput == null) {
                     Log.e("UI", "Not numerical address")
                     showToast(R.string.not_numerical)
@@ -197,8 +201,14 @@ class DashFragment : Fragment() {
                         ).show()
                     } else {
                         //TODO remove this log
-                        Log.d("OUTPUT TYPE","output type is ${getOutputType(radioGroup.checkedRadioButtonId)}")
-                        viewModel.addWatchedRegister(editTextInput, getOutputType(radioGroup.checkedRadioButtonId))
+                        Log.d(
+                            "OUTPUT TYPE",
+                            "output type is ${getOutputType(radioGroup.checkedRadioButtonId)}"
+                        )
+                        viewModel.addWatchedRegister(
+                            editTextInput,
+                            getOutputType(radioGroup.checkedRadioButtonId)
+                        )
                     }
                 }
             }
@@ -225,7 +235,7 @@ class DashFragment : Fragment() {
     }
 
     private fun getOutputType(buttonId: Int): OutputType =
-        when(buttonId){
+        when (buttonId) {
             R.id.radio_uint16 -> OutputType.UINT16
             R.id.radio_int16 -> OutputType.INT16
             R.id.radio_int32 -> OutputType.INT32

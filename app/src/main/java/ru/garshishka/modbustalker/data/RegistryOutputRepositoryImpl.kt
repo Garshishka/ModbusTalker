@@ -19,7 +19,13 @@ class RegistryOutputRepositoryImpl(private val dao: RegisterOutputDao) : Registr
             val offset =
                 if (it.outputType == OutputType.UINT16 || it.outputType == OutputType.INT16)
                     responseArray.size - 2 else responseArray.size - 4
-            dao.save(it.copy(value = responseArray.readBytes(offset, it.outputType).toInt()))
+            dao.save(
+                if (it.outputType != OutputType.REAL32) it.copy(
+                    value = responseArray.readBytes(offset, it.outputType).toInt()
+                ) else it.copy(
+                    valueFloat = responseArray.readBytes(offset, it.outputType).toFloat()
+                )
+            )
         }
     }
 
