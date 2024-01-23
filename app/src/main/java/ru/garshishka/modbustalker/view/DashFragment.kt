@@ -13,12 +13,15 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.RadioGroup
 import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -128,7 +131,7 @@ class DashFragment : Fragment() {
         return binding.root
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
+    @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
     @Composable
     fun SetCompose() {
         val watchedRegisters = viewModel.watchedRegisters.observeAsState().value
@@ -139,53 +142,59 @@ class DashFragment : Fragment() {
                 }) {
                 Text(text = "Add", fontSize = 20.sp)
             }
-            LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 100.dp), content =
-            {
-                watchedRegisters?.let {
-                    items(it.size) { num ->
-                        Card(
-                            onClick = { Log.d("On click", "Click") },
-                            elevation = CardDefaults.cardElevation(),
-                            modifier = Modifier
-                                .padding(4.dp)
-                                .fillMaxWidth(),
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(
-                                    onClick = { deleteWatchedRegister(num) },
-                                    modifier = Modifier
-                                        .padding(4.dp)
-                                        .weight(0.75f)
-                                ) {
-                                    Icon(
-                                        painterResource(id = R.drawable.delete_24),
-                                        contentDescription = "Delete"
-                                    )
-                                }
-                                Column(modifier = Modifier.weight(1.25f)) {
-                                    Text(
-                                        text = it[num].address.toString(),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 16.sp,
-                                        color = Color(0xFF333333),
-                                        textAlign = TextAlign.Start,
-                                        modifier = Modifier.padding(8.dp)
-                                    )
-                                    Text(
-                                        text = if (it[num].outputType != OutputType.REAL32)
-                                            it[num].value?.toString() ?: ""
-                                        else it[num].valueFloat?.toString() ?: "",
-                                        fontSize = 16.sp,
-                                        color = Color(0xFF333333),
-                                        textAlign = TextAlign.Start,
-                                        modifier = Modifier.padding(8.dp)
-                                    )
+            LazyVerticalStaggeredGrid(
+                columns = StaggeredGridCells.Fixed(3),
+                verticalItemSpacing = 4.dp,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                content =
+                {
+                    watchedRegisters?.let {
+                        items(it.size) { num ->
+                            Card(
+                                onClick = { Log.d("On click", "Click") },
+                                elevation = CardDefaults.cardElevation(),
+                                modifier = Modifier
+                                    .padding(4.dp)
+                                    .fillMaxWidth(),
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(
+                                        onClick = { deleteWatchedRegister(num) },
+                                        modifier = Modifier
+                                            .padding(4.dp)
+                                            .weight(0.75f)
+                                    ) {
+                                        Icon(
+                                            painterResource(id = R.drawable.delete_24),
+                                            contentDescription = "Delete"
+                                        )
+                                    }
+                                    Column(modifier = Modifier.weight(1.25f)) {
+                                        Text(
+                                            text = it[num].name,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 16.sp,
+                                            color = Color(0xFF333333),
+                                            textAlign = TextAlign.Start,
+                                            modifier = Modifier.padding(8.dp)
+                                        )
+                                        Text(
+                                            text = if (it[num].outputType != OutputType.REAL32)
+                                                it[num].value?.toString() ?: ""
+                                            else it[num].valueFloat?.toString() ?: "",
+                                            fontSize = 16.sp,
+                                            color = Color(0xFF333333),
+                                            textAlign = TextAlign.Start,
+                                            modifier = Modifier.padding(8.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            })
+                },
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 
@@ -196,33 +205,37 @@ class DashFragment : Fragment() {
         val radioGroup = dialogView.findViewById<RadioGroup>(R.id.type_radio_group)
         val dialog = AlertDialog.Builder(requireContext())
             .setTitle(R.string.choose_register)
-            .setMessage(R.string.choose_register_msg)
             .setView(dialogView)
             .setPositiveButton(R.string.ok) { _, _ ->
-                val editTextInput =
-                    dialogView.findViewById<EditText>(R.id.choose_register).text.toString()
-                        .toIntOrNull()
-                if (editTextInput == null) {
-                    Log.e("UI", "Not numerical address")
-                    showToast(R.string.not_numerical)
-                } else {
-                    if (viewModel.checkRegisterByAddress(editTextInput)) {
-                        Toast.makeText(
-                            requireContext(),
-                            getString(R.string.register_already_watched, editTextInput),
-                            Toast.LENGTH_SHORT
-                        ).show()
+                val registerName =
+                    dialogView.findViewById<EditText>(R.id.register_name).text.toString()
+                if (registerName.isNotBlank()) {
+                    val registerAdress =
+                        dialogView.findViewById<EditText>(R.id.choose_register).text.toString()
+                            .toIntOrNull()
+                    if (registerAdress == null) {
+                        Log.e("UI", "Not numerical address")
+                        showToast(R.string.input_error_not_numerical)
                     } else {
-                        //TODO remove this log
-                        Log.d(
-                            "OUTPUT TYPE",
-                            "output type is ${getOutputType(radioGroup.checkedRadioButtonId)}"
-                        )
-                        viewModel.addWatchedRegister(
-                            editTextInput,
-                            getOutputType(radioGroup.checkedRadioButtonId)
-                        )
+                        if (viewModel.checkRegisterByAddress(registerAdress)) {
+                            Toast.makeText(
+                                requireContext(),
+                                getString(
+                                    R.string.input_error_register_already_watched,
+                                    registerAdress
+                                ),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            viewModel.addWatchedRegister(
+                                registerName,
+                                registerAdress,
+                                getOutputType(radioGroup.checkedRadioButtonId)
+                            )
+                        }
                     }
+                } else {
+                    showToast(R.string.input_error_name)
                 }
             }
             .setNegativeButton(R.string.cancel, null)
@@ -243,6 +256,7 @@ class DashFragment : Fragment() {
             apply()
         }
     }
+
     private fun FragmentDashBinding.setIpAndPortFromSaved(sharedPref: SharedPreferences) {
         ipInput.setText(
             sharedPref.getString(
@@ -319,4 +333,9 @@ class DashFragment : Fragment() {
         }
     }
 
+    override fun onDestroy() {
+        //TODO For now we clean table
+        viewModel.clearRegisterTable()
+        super.onDestroy()
+    }
 }

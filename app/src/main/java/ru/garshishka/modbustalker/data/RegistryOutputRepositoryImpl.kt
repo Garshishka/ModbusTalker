@@ -14,7 +14,6 @@ class RegistryOutputRepositoryImpl(private val dao: RegisterOutputDao) : Registr
     }
 
     override suspend fun updateValue(transactionNumber: Int, responseArray: ByteArray) {
-        //TODO For now it works with Int32, not Real32
         dao.findByTransactionNumber(transactionNumber)?.let {
             val offset =
                 if (it.outputType == OutputType.UINT16 || it.outputType == OutputType.INT16)

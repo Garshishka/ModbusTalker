@@ -7,36 +7,63 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <TextView
+        android:id="@+id/register_name_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/register_name_label"
+        android:textAlignment="center"
+        android:textAppearance="@style/TextAppearance.AppCompat.Title"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        />
+
+    <EditText
+        android:id="@+id/register_name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/register_name"
+        android:inputType="text"
+        android:textAlignment="center"
+        android:textAppearance="@style/TextAppearance.AppCompat.Title"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/register_name_label"
+        app:layout_constraintBottom_toTopOf="@id/type_radio_group"
+        />
+
+    <TextView
         android:id="@+id/choose_register_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/register_to_watch"
-        android:textAppearance="@style/TextAppearance.AppCompat.Title"
+        android:textAlignment="center"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toTopOf="@id/type_radio_group"
         app:layout_constraintBottom_toTopOf="@id/choose_register"
         app:layout_constraintEnd_toStartOf="@id/type_radio_group"
         />
 
     <EditText
         android:id="@+id/choose_register"
-        android:layout_width="40dp"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         tools:text="2"
         android:textAlignment="center"
-        android:textAppearance="@style/TextAppearance.AppCompat.Headline"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
         android:inputType="number"
         app:layout_constraintStart_toStartOf="@id/choose_register_label"
         app:layout_constraintEnd_toEndOf="@id/choose_register_label"
         app:layout_constraintTop_toBottomOf="@id/choose_register_label"
-        app:layout_constraintBottom_toBottomOf="parent"/>
+        app:layout_constraintBottom_toBottomOf="@id/type_radio_group"/>
 
     <RadioGroup
         android:id="@+id/type_radio_group"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="@dimen/bigger_margin"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/register_name"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@id/choose_register_label"

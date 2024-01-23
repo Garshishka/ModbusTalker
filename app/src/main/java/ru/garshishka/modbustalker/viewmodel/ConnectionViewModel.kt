@@ -58,6 +58,7 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
 
     private val byteArraysToSend: MutableList<ByteArray> = mutableListOf()
     private var transactionNumber: UShort = 0u
+    private var registerCardNumber = 0
 
     val watchedRegisters: LiveData<List<RegisterOutput>> =
         repository.getAll().map { list -> list.map { it.toDto() } }
@@ -111,7 +112,7 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
                 ConnectionStatus.DISCONNECTED
             )
             //TODO For future probably no need
-            repository.deleteAll()
+                clearRegisterTable()
             _communicatingStatus.value = ConnectionStatus.DISCONNECTED
         } catch (e: Exception) {
             logError("Disconnection error $e")
@@ -119,7 +120,11 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
         }
     }
 
-    fun addWatchedRegister(registerAddress: Int, outputType: OutputType) = viewModelScope.launch {
+    fun clearRegisterTable(){
+        repository.deleteAll()
+    }
+
+    fun addWatchedRegister(registerName: String,registerAddress: Int, outputType: OutputType) = viewModelScope.launch {
         waitForCommandArrayToFree()
         byteArraysToSend.add(
             makeByteArrayForAnalogueOut(
@@ -131,12 +136,15 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
         beginSendingAndReceivingMessages()
         repository.save(
             RegisterOutput(
+                registerCardNumber,
+                registerName,
                 registerAddress,
                 transactionNumber = transactionNumber.toInt(),
                 outputType = outputType,
             )
         )
         logDebug("added register $registerAddress with transaction $transactionNumber to watch")
+        registerCardNumber++
         transactionNumber++
     }
 

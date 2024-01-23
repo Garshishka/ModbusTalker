@@ -7,12 +7,12 @@
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
     <string name="choose_register">Register to watch</string>
-    <string name="choose_register_msg">Input the address of register to watch</string>
-    <string name="not_numerical">Inputted text in not a number!</string>
+    <string name="choose_register_msg">Input the address and name of register to watch</string>
+    <string name="input_error_not_numerical">Inputted text in not a number!</string>
     <string name="base_ip">___.___.___.____</string>
     <string name="base_port">502</string>
     <string name="register_watch_error">Register watch error: %1$s</string>
-    <string name="register_already_watched">Register %1$d already watched!</string>
+    <string name="input_error_register_already_watched">Register %1$d already watched!</string>
     <string name="delete_register_title">Delete register?</string>
     <string name="delete_register_text">Are you sure you want to delete this register?</string>
     <string name="error_response_1">Register %2$d error %1$d: Illegal function code</string>
@@ -27,11 +27,14 @@
     <string name="error_response_11">Register %2$d error %1$d: Gateway target device failed to respond</string>
     <string name="error_response_unknown">Register %1$d error: Unknown error</string>
     <string name="error_transaction_not_found">Register corresponding to transaction not found</string>
-    <string name="register_to_watch">Register\nto watch</string>
+    <string name="register_to_watch">Register №\nto watch</string>
     <string name="type_int16">Int16</string>
     <string name="type_uint16">UInt16</string>
     <string name="type_int32">Int32</string>
     <string name="type_real32">Real32</string>
     <string name="prefs_saved_ip">saved_ip</string>
     <string name="prefs_saved_port">saved_port</string>
+    <string name="register_name_label">Register name</string>
+    <string name="input_error_name">No name for register!</string>
+    <string name="register_name">Register</string>
 </resources>
