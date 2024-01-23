@@ -9,7 +9,7 @@
     app:navGraph ="@navigation/nav_main"
     app:defaultNavHost ="true"
     android:windowSoftInputMode="adjustResize"
-    tools:context=".MainActivity">
+    tools:context=".view.MainActivity">
 
 
 

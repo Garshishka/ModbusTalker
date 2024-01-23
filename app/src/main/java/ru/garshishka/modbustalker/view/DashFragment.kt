@@ -1,6 +1,8 @@
-package ru.garshishka.modbustalker
+package ru.garshishka.modbustalker.view
 
 import android.app.AlertDialog
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.text.method.LinkMovementMethod
 import android.util.Log
@@ -20,6 +22,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -38,6 +41,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import by.kirich1409.viewbindingdelegate.CreateMethod
 import by.kirich1409.viewbindingdelegate.viewBinding
+import ru.garshishka.modbustalker.R
 import ru.garshishka.modbustalker.data.enums.ConnectionStatus
 import ru.garshishka.modbustalker.data.enums.OutputType
 import ru.garshishka.modbustalker.databinding.FragmentDashBinding
@@ -59,13 +63,20 @@ class DashFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         binding.apply {
+            val sharedPref = activity?.getPreferences(Context.MODE_PRIVATE)
+                ?: throw Exception("No activity found")
+            setIpAndPortFromSaved(sharedPref)
+
             debugText.movementMethod = LinkMovementMethod.getInstance()
             connectButton.setOnClickListener {
                 when (viewModel.connectionStatus.value) {
-                    ConnectionStatus.DISCONNECTED -> viewModel.connect(
-                        ipInput.text.toString(),
-                        portInput.text.toString()
-                    )
+                    ConnectionStatus.DISCONNECTED -> {
+                        saveIpAndPort(sharedPref)
+                        viewModel.connect(
+                            ipInput.text.toString(),
+                            portInput.text.toString()
+                        )
+                    }
 
                     ConnectionStatus.CONNECTED -> viewModel.disconnect()
                     else -> {}
@@ -117,6 +128,7 @@ class DashFragment : Fragment() {
         return binding.root
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun SetCompose() {
         val watchedRegisters = viewModel.watchedRegisters.observeAsState().value
@@ -132,6 +144,7 @@ class DashFragment : Fragment() {
                 watchedRegisters?.let {
                     items(it.size) { num ->
                         Card(
+                            onClick = { Log.d("On click", "Click") },
                             elevation = CardDefaults.cardElevation(),
                             modifier = Modifier
                                 .padding(4.dp)
@@ -215,6 +228,34 @@ class DashFragment : Fragment() {
             .setNegativeButton(R.string.cancel, null)
             .create()
         dialog.show()
+    }
+
+    private fun FragmentDashBinding.saveIpAndPort(sharedPref: SharedPreferences) {
+        with(sharedPref.edit()) {
+            putString(
+                getString(R.string.prefs_saved_ip),
+                ipInput.text.toString()
+            )
+            putString(
+                getString(R.string.prefs_saved_port),
+                portInput.text.toString()
+            )
+            apply()
+        }
+    }
+    private fun FragmentDashBinding.setIpAndPortFromSaved(sharedPref: SharedPreferences) {
+        ipInput.setText(
+            sharedPref.getString(
+                getString(R.string.prefs_saved_ip),
+                getString(R.string.base_ip)
+            )
+        )
+        portInput.setText(
+            sharedPref.getString(
+                getString(R.string.prefs_saved_port),
+                getString(R.string.base_port)
+            )
+        )
     }
 
     private fun deleteWatchedRegister(registerNumberInGrid: Int) {

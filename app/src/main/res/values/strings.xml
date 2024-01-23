@@ -9,7 +9,7 @@
     <string name="choose_register">Register to watch</string>
     <string name="choose_register_msg">Input the address of register to watch</string>
     <string name="not_numerical">Inputted text in not a number!</string>
-    <string name="base_ip">10.0.2.2</string>
+    <string name="base_ip">___.___.___.____</string>
     <string name="base_port">502</string>
     <string name="register_watch_error">Register watch error: %1$s</string>
     <string name="register_already_watched">Register %1$d already watched!</string>
@@ -32,4 +32,6 @@
     <string name="type_uint16">UInt16</string>
     <string name="type_int32">Int32</string>
     <string name="type_real32">Real32</string>
+    <string name="prefs_saved_ip">saved_ip</string>
+    <string name="prefs_saved_port">saved_port</string>
 </resources>

@@ -7,7 +7,7 @@
 
     <fragment
         android:id="@+id/dashFragment"
-        android:name="ru.garshishka.modbustalker.DashFragment"
+        android:name="ru.garshishka.modbustalker.view.DashFragment"
         android:label="fragment_dash"
         tools:layout="@layout/fragment_dash" />
 </navigation>

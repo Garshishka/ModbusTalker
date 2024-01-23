@@ -1,8 +1,9 @@
-package ru.garshishka.modbustalker
+package ru.garshishka.modbustalker.view
 
 import android.os.Bundle
 import android.os.StrictMode
 import androidx.appcompat.app.AppCompatActivity
+import ru.garshishka.modbustalker.R
 
 class MainActivity : AppCompatActivity() {
 

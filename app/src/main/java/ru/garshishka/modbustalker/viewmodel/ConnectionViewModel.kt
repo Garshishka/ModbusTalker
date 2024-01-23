@@ -247,19 +247,24 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
 
     private fun logDebug(message: String) {
         Log.d("ModBus", message)
-        _debugText.value = "$message\n" + _debugText.value
+        addToDebugText("$message\n")
     }
 
     private fun logResponse(message: String) {
         Log.i("ModBus", message)
-        _debugText.value = "RESPONSE $message\n" + _debugText.value
+        addToDebugText("RESPONSE $message\n")
     }
 
     private fun logError(message: String) {
         Log.e("ModBus", message)
-        _debugText.value = "!ERROR! $message\n" + _debugText.value
+        addToDebugText("!ERROR! $message\n")
     }
 
+    private fun addToDebugText(message: String){
+        _debugText.value?.let {
+            _debugText.value = (message + it).lines().takeLast(100).joinToString("\n")
+        }
+    }
     private fun checkIfErrorNumber(sent: Int, response: Int): Boolean =
         response - sent == 128
 
