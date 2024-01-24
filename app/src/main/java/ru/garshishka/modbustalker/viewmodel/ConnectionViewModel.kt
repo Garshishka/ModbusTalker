@@ -27,6 +27,7 @@ import ru.garshishka.modbustalker.utils.errors.NotFoundTransactionNumberErrorExc
 import ru.garshishka.modbustalker.utils.errors.ResponseErrorException
 import ru.garshishka.modbustalker.utils.getTransactionAndFunctionNumber
 import ru.garshishka.modbustalker.utils.makeByteArrayForAnalogueOut
+import ru.garshishka.modbustalker.utils.makeByteArrayForValueChange
 import ru.garshishka.modbustalker.utils.read1ByteFromBuffer
 import ru.garshishka.modbustalker.utils.readBytes
 
@@ -87,6 +88,9 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
             )
             receiveChannel = socket.openReadChannel()
             sendChannel = socket.openWriteChannel(true)
+            //TODO For future probably no need
+            clearRegisterTable()
+
             _communicatingStatus.value = ConnectionStatus.CONNECTED
         } catch (e: Exception) {
             logError("Connection error $e")
@@ -111,8 +115,6 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
                 _connectionStatus,
                 ConnectionStatus.DISCONNECTED
             )
-            //TODO For future probably no need
-                clearRegisterTable()
             _communicatingStatus.value = ConnectionStatus.DISCONNECTED
         } catch (e: Exception) {
             logError("Disconnection error $e")
@@ -120,33 +122,49 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
         }
     }
 
-    fun clearRegisterTable(){
+    fun clearRegisterTable() {
         repository.deleteAll()
     }
 
-    fun addWatchedRegister(registerName: String,registerAddress: Int, outputType: OutputType) = viewModelScope.launch {
-        waitForCommandArrayToFree()
-        byteArraysToSend.add(
-            makeByteArrayForAnalogueOut(
-                registerAddress,
-                if (outputType == OutputType.INT16 || outputType == OutputType.UINT16) 1 else 2,
-                transactionNumber
+    fun addWatchedRegister(registerName: String, registerAddress: Int, outputType: OutputType) =
+        viewModelScope.launch {
+            waitForCommandArrayToFree()
+            byteArraysToSend.add(
+                makeByteArrayForAnalogueOut(
+                    registerAddress,
+                    if (outputType == OutputType.INT16 || outputType == OutputType.UINT16) 1 else 2,
+                    transactionNumber
+                )
             )
-        )
-        beginSendingAndReceivingMessages()
-        repository.save(
-            RegisterOutput(
-                registerCardNumber,
-                registerName,
-                registerAddress,
-                transactionNumber = transactionNumber.toInt(),
-                outputType = outputType,
+            beginSendingAndReceivingMessages()
+            repository.save(
+                RegisterOutput(
+                    registerCardNumber,
+                    registerName,
+                    registerAddress,
+                    transactionNumber = transactionNumber.toInt(),
+                    outputType = outputType,
+                )
             )
-        )
-        logDebug("added register $registerAddress with transaction $transactionNumber to watch")
-        registerCardNumber++
-        transactionNumber++
-    }
+            logDebug("added register $registerAddress with transaction $transactionNumber to watch")
+            registerCardNumber++
+            transactionNumber++
+        }
+
+    fun sendNewValueToRegister(registerAddress: Int, outputType: OutputType, newValue: Number) =
+        viewModelScope.launch {
+            waitForCommandArrayToFree()
+            //TODO change according to OutputType
+            byteArraysToSend.add(
+                makeByteArrayForValueChange(
+                    registerAddress,
+                    newValue.toInt(),
+                    transactionNumber
+                )
+            )
+            logDebug("send $newValue to register $registerAddress with transaction $transactionNumber to set")
+            transactionNumber++
+        }
 
     private fun sendingAndReadingMessages() = viewModelScope.launch {
         while (sendingAndReading) {
@@ -155,52 +173,26 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
                 val transactionNumber = message.readBytes(0).toInt()
                 val functionNumber = message.read1ByteFromBuffer(7)
                 try {
-                    val watchedRegister = repository.findRegisterByTransaction(transactionNumber)
-
                     _communicatingStatus.value = ConnectionStatus.WORKING
                     sendChannel.writeFully(message, 0, message.size)
 
-                    var waitingForAnswer = 0
-                    var gotCorrectResponse = false
-                    //Waiting to receive a respond  with the same transaction number
-                    //TODO made waitingForAnswer and timeout configurable
-                    while (waitingForAnswer < 5 && !gotCorrectResponse) {
-                        val response = ByteArray(
-                            9 +
-                                    if (watchedRegister.outputType == OutputType.INT16
-                                        || watchedRegister.outputType == OutputType.UINT16
-                                    ) 2 else 4
+                    println(functionNumber)
+                    when (functionNumber) {
+                        0x03 -> receiveResponseForAnalogueOutput(
+                            transactionNumber,
+                            functionNumber,
+                            message
                         )
-                        receiveChannel.readAvailable(response)
-                        val output = response.getTransactionAndFunctionNumber()
-                        if (output.first == transactionNumber) {
-                            gotCorrectResponse = true
-                            //Checking if we got a response and not an error
-                            if (output.second == functionNumber) {
-                                var outputString = ""
-                                response.forEach { outputString += "${it.toUByte()}, " }
-                                logResponse(outputString)
-                                repository.updateValue(output.first, response)
-                            } else {
-                                byteArraysToSend.remove(message)
-                                val registerNumber = watchedRegister.address
-                                if (checkIfErrorNumber(functionNumber, output.second)) {
-                                    throw ResponseErrorException(
-                                        response.read1ByteFromBuffer(8),
-                                        registerNumber
-                                    )
-                                } else {
-                                    throw ResponseErrorException(-1, registerNumber)
-                                }
-                            }
-                        } else {
-                            delay(250)
-                            waitingForAnswer++
-                        }
+
+                        0x10 -> receiveResponseForChangeValue(
+                            transactionNumber,
+                            functionNumber,
+                            message
+                        )
+                        //TODO probably change to particular error
+                        else -> throw Exception("Unknown function number")
                     }
-                    if (!gotCorrectResponse) {
-                        logError("skipped transaction $transactionNumber")
-                    }
+
                     _communicatingStatus.value = ConnectionStatus.CONNECTED
                 } //TODO add register number
                 catch (e: NotFoundTransactionNumberErrorException) {
@@ -222,6 +214,99 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
             commandArrayBusy = false
             //TODO made this delay configurable
             delay(500)
+        }
+    }
+
+    private suspend fun receiveResponseForChangeValue(
+        transactionNumber: Int,
+        functionNumber: Int,
+        message: ByteArray
+    ) {
+        //TODO Merge waiting for response part between all functions
+        var waitingForAnswer = 0
+        var gotCorrectResponse = false
+
+        while (waitingForAnswer < 5 && !gotCorrectResponse) {
+            val response = ByteArray(12)
+            receiveChannel.readAvailable(response)
+            val output = response.getTransactionAndFunctionNumber()
+            if (output.first == transactionNumber) {
+                gotCorrectResponse = true
+                //Checking if we got a response and not an error
+                if (output.second == functionNumber) {
+                    var outputString = ""
+                    response.forEach { outputString += "${it.toUByte()}, " }
+                    logResponse(outputString)
+                } else {
+                    //TODO see to add here regNumber
+                    if (checkIfErrorNumber(functionNumber, output.second)) {
+                        throw ResponseErrorException(
+                            response.read1ByteFromBuffer(8),
+                            0
+                        )
+                    } else {
+                        throw ResponseErrorException(-1, 0)
+                    }
+                }
+                byteArraysToSend.remove(message)
+            } else {
+                delay(250)
+                waitingForAnswer++
+            }
+        }
+        if (!gotCorrectResponse) {
+            logError("skipped transaction $transactionNumber")
+        }
+
+    }
+
+    private suspend fun receiveResponseForAnalogueOutput(
+        transactionNumber: Int,
+        functionNumber: Int,
+        message: ByteArray
+    ) {
+        val watchedRegister = repository.findRegisterByTransaction(transactionNumber)
+
+        var waitingForAnswer = 0
+        var gotCorrectResponse = false
+        //Waiting to receive a respond  with the same transaction number
+        //TODO made waitingForAnswer and timeout configurable
+        while (waitingForAnswer < 5 && !gotCorrectResponse) {
+            val response = ByteArray(
+                9 +
+                        if (watchedRegister.outputType == OutputType.INT16
+                            || watchedRegister.outputType == OutputType.UINT16
+                        ) 2 else 4
+            )
+            receiveChannel.readAvailable(response)
+            val output = response.getTransactionAndFunctionNumber()
+            if (output.first == transactionNumber) {
+                gotCorrectResponse = true
+                //Checking if we got a response and not an error
+                if (output.second == functionNumber) {
+                    var outputString = ""
+                    response.forEach { outputString += "${it.toUByte()}, " }
+                    logResponse(outputString)
+                    repository.updateValue(output.first, response)
+                } else {
+                    byteArraysToSend.remove(message)
+                    val registerNumber = watchedRegister.address
+                    if (checkIfErrorNumber(functionNumber, output.second)) {
+                        throw ResponseErrorException(
+                            response.read1ByteFromBuffer(8),
+                            registerNumber
+                        )
+                    } else {
+                        throw ResponseErrorException(-1, registerNumber)
+                    }
+                }
+            } else {
+                delay(250)
+                waitingForAnswer++
+            }
+        }
+        if (!gotCorrectResponse) {
+            logError("skipped transaction $transactionNumber")
         }
     }
 
@@ -268,15 +353,16 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
         addToDebugText("!ERROR! $message\n")
     }
 
-    private fun addToDebugText(message: String){
+    private fun addToDebugText(message: String) {
         _debugText.value?.let {
             _debugText.value = (message + it).lines().takeLast(100).joinToString("\n")
         }
     }
+
     private fun checkIfErrorNumber(sent: Int, response: Int): Boolean =
         response - sent == 128
 
-    private suspend fun waitForCommandArrayToFree(){
+    private suspend fun waitForCommandArrayToFree() {
         while (commandArrayBusy)
             delay(100)
     }

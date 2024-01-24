@@ -36,5 +36,9 @@
     <string name="prefs_saved_port">saved_port</string>
     <string name="register_name_label">Register name</string>
     <string name="input_error_name">No name for register!</string>
+    <string name="input_error_new_value">Inputted new value is not right</string>
     <string name="register_name">Register</string>
+    <string name="register_to_change_label">Register №</string>
+    <string name="new_value_label">New value:</string>
+    <string name="send_button">Send</string>
 </resources>

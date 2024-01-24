@@ -85,6 +85,36 @@ class DashFragment : Fragment() {
                     else -> {}
                 }
             }
+            newValueSendButton.setOnClickListener {
+                val registerToChange = registerToChange.text.toString().toIntOrNull()
+                if (registerToChange == null) {
+                    Log.e("UI", "Not numerical address")
+                    showToast(R.string.input_error_not_numerical)
+                } else {
+                    val outputType = when (outputTypeGroup.checkedRadioButtonId) {
+                        R.id.radio_uint16 -> OutputType.UINT16
+                        R.id.radio_int16 -> OutputType.INT16
+                        R.id.radio_int32 -> OutputType.INT32
+                        R.id.radio_real32 -> OutputType.REAL32
+
+                        else -> throw Exception("Unknown Output Type")
+                    }
+                    val newValueNumber: Number? = when (outputType) {
+                        OutputType.UINT16 -> if (newValue.text.toString().contains("-"))
+                            null else newValue.text.toString().toShortOrNull()
+
+                        OutputType.INT16 -> newValue.text.toString().toShortOrNull()
+                        OutputType.INT32 -> newValue.text.toString().toIntOrNull()
+                        OutputType.REAL32 -> newValue.text.toString().toFloatOrNull()
+                    }
+                    if(newValueNumber == null){
+                        Log.e("UI", "New value is not right")
+                        showToast(R.string.input_error_new_value)
+                    } else{
+                        viewModel.sendNewValueToRegister(registerToChange, outputType, newValueNumber)
+                    }
+                }
+            }
             composeView.setContent {
                 SetCompose()
             }
@@ -97,6 +127,7 @@ class DashFragment : Fragment() {
                         connectionIcon.setImageResource(R.drawable.signal_connected_24)
                         connectButton.setText(R.string.connect)
                         composeView.isVisible = false
+                        changeValuePanel.isVisible = false
                     }
                 } else {
                     binding.connectionIcon.setImageResource(R.drawable.signal_disconnected_24)
@@ -105,6 +136,7 @@ class DashFragment : Fragment() {
                     binding.apply {
                         connectButton.setText(R.string.disconnect)
                         composeView.isVisible = true
+                        changeValuePanel.isVisible = true
                     }
                 }
             }
