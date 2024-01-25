@@ -181,7 +181,7 @@
             app:layout_constraintTop_toTopOf="@id/register_to_change_label"
             app:layout_constraintBottom_toBottomOf="@id/register_to_change_label"
             app:layout_constraintEnd_toEndOf="parent"
-            android:inputType="number"
+            android:inputType="numberSigned"
             />
 
         <com.google.android.material.button.MaterialButton
