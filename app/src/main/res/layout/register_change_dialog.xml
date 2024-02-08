@@ -2,13 +2,13 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:layout_margin="@dimen/default_margin">
+    android:layout_margin="@dimen/default_margin_8dp">
 
         <RadioGroup
         android:id="@+id/type_radio_group"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="@dimen/bigger_margin"
+        android:layout_marginHorizontal="@dimen/big_margin_16dp"
         >
         <RadioButton
             android:id="@+id/radio_uint16"

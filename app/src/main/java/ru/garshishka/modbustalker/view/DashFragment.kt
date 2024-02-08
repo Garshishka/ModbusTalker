@@ -4,6 +4,8 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.text.method.LinkMovementMethod
 import android.util.Log
 import android.view.LayoutInflater
@@ -49,6 +51,8 @@ import ru.garshishka.modbustalker.data.enums.ConnectionStatus
 import ru.garshishka.modbustalker.data.enums.OutputType
 import ru.garshishka.modbustalker.databinding.FragmentDashBinding
 import ru.garshishka.modbustalker.di.DependencyContainer
+import ru.garshishka.modbustalker.utils.getIpString
+import ru.garshishka.modbustalker.utils.setToIpInput
 import ru.garshishka.modbustalker.viewmodel.ConnectionViewModel
 import ru.garshishka.modbustalker.viewmodel.ViewModelFactory
 
@@ -61,6 +65,8 @@ class DashFragment : Fragment() {
     }
     private val binding: FragmentDashBinding by viewBinding(createMethod = CreateMethod.INFLATE)
 
+    private lateinit var ipViewContainer: List<EditText>
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -68,15 +74,19 @@ class DashFragment : Fragment() {
         binding.apply {
             val sharedPref = activity?.getPreferences(Context.MODE_PRIVATE)
                 ?: throw Exception("No activity found")
+            ipViewContainer = listOf(ipInput1, ipInput2, ipInput3, ipInput4)
             setIpAndPortFromSaved(sharedPref)
 
+            ipViewContainer.forEachIndexed { i, editText ->
+                editText.addTextChangedListener(IpTextWatcher(i))
+            }
             debugText.movementMethod = LinkMovementMethod.getInstance()
             connectButton.setOnClickListener {
                 when (viewModel.connectionStatus.value) {
                     ConnectionStatus.DISCONNECTED -> {
                         saveIpAndPort(sharedPref)
                         viewModel.connect(
-                            ipInput.text.toString(),
+                            ipViewContainer.getIpString(),
                             portInput.text.toString()
                         )
                     }
@@ -107,11 +117,15 @@ class DashFragment : Fragment() {
                         OutputType.INT32 -> newValue.text.toString().toIntOrNull()
                         OutputType.REAL32 -> newValue.text.toString().toFloatOrNull()
                     }
-                    if(newValueNumber == null){
+                    if (newValueNumber == null) {
                         Log.e("UI", "New value is not right")
                         showToast(R.string.input_error_new_value)
-                    } else{
-                        viewModel.sendNewValueToRegister(registerToChange, outputType, newValueNumber)
+                    } else {
+                        viewModel.sendNewValueToRegister(
+                            registerToChange,
+                            outputType,
+                            newValueNumber
+                        )
                     }
                 }
             }
@@ -175,7 +189,7 @@ class DashFragment : Fragment() {
                 Text(text = "Add", fontSize = 20.sp)
             }
             LazyVerticalStaggeredGrid(
-                columns = StaggeredGridCells.Fixed(3),
+                columns = StaggeredGridCells.Fixed(2),
                 verticalItemSpacing = 4.dp,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 content =
@@ -279,7 +293,7 @@ class DashFragment : Fragment() {
         with(sharedPref.edit()) {
             putString(
                 getString(R.string.prefs_saved_ip),
-                ipInput.text.toString()
+                ipViewContainer.getIpString()
             )
             putString(
                 getString(R.string.prefs_saved_port),
@@ -290,12 +304,8 @@ class DashFragment : Fragment() {
     }
 
     private fun FragmentDashBinding.setIpAndPortFromSaved(sharedPref: SharedPreferences) {
-        ipInput.setText(
-            sharedPref.getString(
-                getString(R.string.prefs_saved_ip),
-                getString(R.string.base_ip)
-            )
-        )
+        sharedPref.getString(getString(R.string.prefs_saved_ip), getString(R.string.base_ip))
+            ?.setToIpInput(ipViewContainer)
         portInput.setText(
             sharedPref.getString(
                 getString(R.string.prefs_saved_port),
@@ -369,5 +379,34 @@ class DashFragment : Fragment() {
         //TODO For now we clean table
         viewModel.clearRegisterTable()
         super.onDestroy()
+    }
+
+    inner class IpTextWatcher(private val index: Int) : TextWatcher {
+        override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {
+            //ignore
+        }
+
+        override fun onTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {
+            //ignore
+        }
+
+        override fun afterTextChanged(s: Editable?) {
+            if (s != null && s.isEmpty() && index > 0) {
+                ipViewContainer[index - 1].requestFocus()
+                ipViewContainer[index - 1].setSelection(ipViewContainer[index - 1].text.length)
+            } else if (!s.isNullOrBlank() && index < 3 &&
+                (s.length == 3 || s[s.length - 1] == '.')
+            ) {
+                ipViewContainer[index + 1].requestFocus()
+            }
+            if(ipViewContainer[index].text.length>3){
+                ipViewContainer[index].setText(ipViewContainer[index].text.toString()
+                    .take(3))
+            }
+            if(ipViewContainer[index].text.contains('.')){
+                ipViewContainer[index].setText(ipViewContainer[index].text.toString()
+                    .replace(".", ""))
+            }
+        }
     }
 }
