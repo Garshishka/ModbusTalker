@@ -13,7 +13,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.ImageView
-import android.widget.RadioGroup
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
@@ -53,6 +52,8 @@ import ru.garshishka.modbustalker.databinding.FragmentDashBinding
 import ru.garshishka.modbustalker.di.DependencyContainer
 import ru.garshishka.modbustalker.utils.getIpString
 import ru.garshishka.modbustalker.utils.setToIpInput
+import ru.garshishka.modbustalker.utils.showToast
+import ru.garshishka.modbustalker.view.dialog.chooseRegisterToWatch
 import ru.garshishka.modbustalker.viewmodel.ConnectionViewModel
 import ru.garshishka.modbustalker.viewmodel.ViewModelFactory
 
@@ -99,7 +100,7 @@ class DashFragment : Fragment() {
                 val registerToChange = registerToChange.text.toString().toIntOrNull()
                 if (registerToChange == null) {
                     Log.e("UI", "Not numerical address")
-                    showToast(R.string.input_error_not_numerical)
+                    requireContext().showToast(R.string.input_error_not_numerical)
                 } else {
                     val outputType = when (outputTypeGroup.checkedRadioButtonId) {
                         R.id.radio_uint16 -> OutputType.UINT16
@@ -119,7 +120,7 @@ class DashFragment : Fragment() {
                     }
                     if (newValueNumber == null) {
                         Log.e("UI", "New value is not right")
-                        showToast(R.string.input_error_new_value)
+                        requireContext().showToast(R.string.input_error_new_value)
                     } else {
                         viewModel.sendNewValueToRegister(
                             registerToChange,
@@ -164,14 +165,10 @@ class DashFragment : Fragment() {
                 showResponseErrorToast(it.first, it.second)
             }
             registerWatchError.observe(viewLifecycleOwner) {
-                Toast.makeText(
-                    requireContext(),
-                    getString(R.string.register_watch_error, it),
-                    Toast.LENGTH_LONG
-                ).show()
+                requireContext().showToast(R.string.register_watch_error, it)
             }
             transactionNotFoundError.observe(viewLifecycleOwner) {
-                showToast(R.string.error_transaction_not_found)
+                requireContext().showToast(R.string.error_transaction_not_found)
             }
         }
         return binding.root
@@ -184,7 +181,7 @@ class DashFragment : Fragment() {
         Column {
             Button(
                 onClick = {
-                    chooseRegisterToWatch()
+                    requireActivity().chooseRegisterToWatch(requireContext(),viewModel)
                 }) {
                 Text(text = "Add", fontSize = 20.sp)
             }
@@ -244,51 +241,6 @@ class DashFragment : Fragment() {
         }
     }
 
-    private fun chooseRegisterToWatch() {
-        val dialogView = requireActivity().layoutInflater.inflate(
-            R.layout.register_to_watch_dialog, null
-        )
-        val radioGroup = dialogView.findViewById<RadioGroup>(R.id.type_radio_group)
-        val dialog = AlertDialog.Builder(requireContext())
-            .setTitle(R.string.choose_register)
-            .setView(dialogView)
-            .setPositiveButton(R.string.ok) { _, _ ->
-                val registerName =
-                    dialogView.findViewById<EditText>(R.id.register_name).text.toString()
-                if (registerName.isNotBlank()) {
-                    val registerAdress =
-                        dialogView.findViewById<EditText>(R.id.choose_register).text.toString()
-                            .toIntOrNull()
-                    if (registerAdress == null) {
-                        Log.e("UI", "Not numerical address")
-                        showToast(R.string.input_error_not_numerical)
-                    } else {
-                        if (viewModel.checkRegisterByAddress(registerAdress)) {
-                            Toast.makeText(
-                                requireContext(),
-                                getString(
-                                    R.string.input_error_register_already_watched,
-                                    registerAdress
-                                ),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        } else {
-                            viewModel.addWatchedRegister(
-                                registerName,
-                                registerAdress,
-                                getOutputType(radioGroup.checkedRadioButtonId)
-                            )
-                        }
-                    }
-                } else {
-                    showToast(R.string.input_error_name)
-                }
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .create()
-        dialog.show()
-    }
-
     private fun FragmentDashBinding.saveIpAndPort(sharedPref: SharedPreferences) {
         with(sharedPref.edit()) {
             putString(
@@ -325,21 +277,6 @@ class DashFragment : Fragment() {
             .create()
         dialog.show()
     }
-
-    private fun showToast(stringResource: Int) {
-        Toast.makeText(requireContext(), stringResource, Toast.LENGTH_LONG)
-            .show()
-    }
-
-    private fun getOutputType(buttonId: Int): OutputType =
-        when (buttonId) {
-            R.id.radio_uint16 -> OutputType.UINT16
-            R.id.radio_int16 -> OutputType.INT16
-            R.id.radio_int32 -> OutputType.INT32
-            R.id.radio_real32 -> OutputType.REAL32
-            else -> OutputType.INT16
-        }
-
 
     private fun showResponseErrorToast(errorCode: Int?, registerNumber: Int) {
         val errorMessage = when (errorCode) {
