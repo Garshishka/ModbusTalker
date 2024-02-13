@@ -6,6 +6,7 @@
     <string name="port_label">Port:</string>
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
+    <string name="register_settings">Register settings</string>
     <string name="choose_register">Register to watch</string>
     <string name="choose_register_msg">Input the address and name of register to watch</string>
     <string name="input_error_not_numerical">Inputted text in not a number!</string>

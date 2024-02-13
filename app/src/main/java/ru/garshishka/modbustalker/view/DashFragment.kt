@@ -1,6 +1,5 @@
 package ru.garshishka.modbustalker.view
 
-import android.app.AlertDialog
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
@@ -54,6 +53,8 @@ import ru.garshishka.modbustalker.utils.getIpString
 import ru.garshishka.modbustalker.utils.setToIpInput
 import ru.garshishka.modbustalker.utils.showToast
 import ru.garshishka.modbustalker.view.dialog.chooseRegisterToWatch
+import ru.garshishka.modbustalker.view.dialog.deleteWatchedRegister
+import ru.garshishka.modbustalker.view.dialog.registerWatchSettings
 import ru.garshishka.modbustalker.viewmodel.ConnectionViewModel
 import ru.garshishka.modbustalker.viewmodel.ViewModelFactory
 
@@ -181,7 +182,7 @@ class DashFragment : Fragment() {
         Column {
             Button(
                 onClick = {
-                    requireActivity().chooseRegisterToWatch(requireContext(),viewModel)
+                    requireActivity().chooseRegisterToWatch(requireContext(), viewModel)
                 }) {
                 Text(text = "Add", fontSize = 20.sp)
             }
@@ -194,7 +195,14 @@ class DashFragment : Fragment() {
                     watchedRegisters?.let {
                         items(it.size) { num ->
                             Card(
-                                onClick = { Log.d("On click", "Click") },
+                                onClick = {
+                                    requireActivity().registerWatchSettings(
+                                        requireContext(),
+                                        viewModel,
+                                        num,
+                                        it[num]
+                                    )
+                                },
                                 elevation = CardDefaults.cardElevation(),
                                 modifier = Modifier
                                     .padding(4.dp)
@@ -202,7 +210,12 @@ class DashFragment : Fragment() {
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     IconButton(
-                                        onClick = { deleteWatchedRegister(num) },
+                                        onClick = {
+                                            requireContext().deleteWatchedRegister(
+                                                num,
+                                                viewModel
+                                            )
+                                        },
                                         modifier = Modifier
                                             .padding(4.dp)
                                             .weight(0.75f)
@@ -266,18 +279,6 @@ class DashFragment : Fragment() {
         )
     }
 
-    private fun deleteWatchedRegister(registerNumberInGrid: Int) {
-        val dialog = AlertDialog.Builder(requireContext())
-            .setTitle(getString(R.string.delete_register_title))
-            .setMessage(getString(R.string.delete_register_text))
-            .setPositiveButton(R.string.ok) { _, _ ->
-                viewModel.deleteWatchedRegister(registerNumberInGrid)
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .create()
-        dialog.show()
-    }
-
     private fun showResponseErrorToast(errorCode: Int?, registerNumber: Int) {
         val errorMessage = when (errorCode) {
             1 -> getString(R.string.error_response_1, errorCode, registerNumber)
@@ -336,13 +337,17 @@ class DashFragment : Fragment() {
             ) {
                 ipViewContainer[index + 1].requestFocus()
             }
-            if(ipViewContainer[index].text.length>3){
-                ipViewContainer[index].setText(ipViewContainer[index].text.toString()
-                    .take(3))
+            if (ipViewContainer[index].text.length > 3) {
+                ipViewContainer[index].setText(
+                    ipViewContainer[index].text.toString()
+                        .take(3)
+                )
             }
-            if(ipViewContainer[index].text.contains('.')){
-                ipViewContainer[index].setText(ipViewContainer[index].text.toString()
-                    .replace(".", ""))
+            if (ipViewContainer[index].text.contains('.')) {
+                ipViewContainer[index].setText(
+                    ipViewContainer[index].text.toString()
+                        .replace(".", "")
+                )
             }
         }
     }

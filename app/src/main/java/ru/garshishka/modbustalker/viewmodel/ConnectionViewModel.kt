@@ -178,6 +178,10 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
             transactionNumber++
         }
 
+    fun updateRegister(newRegisterOutput: RegisterOutput) = viewModelScope.launch{
+        repository.save(newRegisterOutput)
+    }
+
     private fun sendingAndReadingMessages() = viewModelScope.launch {
         while (sendingAndReading) {
             commandArrayBusy = true
@@ -285,7 +289,8 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
     }
 
     fun checkRegisterByAddress(address: Int): Boolean =
-        repository.checkRegisterByAddress(address)
+        repository.getRegisterByAddress(address) != null
+
 
     private fun changeStatusOfConnection(
         message: String,

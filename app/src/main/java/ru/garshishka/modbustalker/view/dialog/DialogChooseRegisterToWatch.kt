@@ -7,7 +7,7 @@ import android.widget.EditText
 import android.widget.RadioGroup
 import androidx.fragment.app.FragmentActivity
 import ru.garshishka.modbustalker.R
-import ru.garshishka.modbustalker.utils.getOutputType
+import ru.garshishka.modbustalker.utils.getOutputTypeFromButtonId
 import ru.garshishka.modbustalker.utils.showToast
 import ru.garshishka.modbustalker.viewmodel.ConnectionViewModel
 
@@ -36,7 +36,7 @@ fun FragmentActivity.chooseRegisterToWatch(context: Context, viewModel: Connecti
                         viewModel.addWatchedRegister(
                             registerName,
                             registerAddress,
-                            getOutputType(radioGroup.checkedRadioButtonId)
+                            getOutputTypeFromButtonId(radioGroup.checkedRadioButtonId)
                         )
                     }
                 }

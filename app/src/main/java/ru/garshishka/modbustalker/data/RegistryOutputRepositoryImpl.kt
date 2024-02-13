@@ -36,9 +36,8 @@ class RegistryOutputRepositoryImpl(private val dao: RegisterOutputDao) : Registr
         dao.findByTransactionNumber(transactionNumber)?.toDto()
             ?: throw NotFoundTransactionNumberErrorException(transactionNumber)
 
-
-    override fun checkRegisterByAddress(address: Int): Boolean =
-        (dao.findByAddress(address) != null)
+    override fun getRegisterByAddress(address: Int): RegisterOutput? =
+        dao.findByAddress(address)?.toDto()
 
 
     override fun deleteAll() {
