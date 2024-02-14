@@ -47,13 +47,17 @@ import by.kirich1409.viewbindingdelegate.viewBinding
 import ru.garshishka.modbustalker.R
 import ru.garshishka.modbustalker.data.enums.ConnectionStatus
 import ru.garshishka.modbustalker.data.enums.OutputType
+import ru.garshishka.modbustalker.data.enums.RegisterConnection
 import ru.garshishka.modbustalker.databinding.FragmentDashBinding
 import ru.garshishka.modbustalker.di.DependencyContainer
+import ru.garshishka.modbustalker.ui.theme.cardGray
+import ru.garshishka.modbustalker.ui.theme.cardGreen
+import ru.garshishka.modbustalker.ui.theme.cardRed
+import ru.garshishka.modbustalker.ui.theme.cardYellow
 import ru.garshishka.modbustalker.utils.getIpString
 import ru.garshishka.modbustalker.utils.setToIpInput
 import ru.garshishka.modbustalker.utils.showToast
 import ru.garshishka.modbustalker.view.dialog.chooseRegisterToWatch
-import ru.garshishka.modbustalker.view.dialog.deleteWatchedRegister
 import ru.garshishka.modbustalker.view.dialog.registerWatchSettings
 import ru.garshishka.modbustalker.viewmodel.ConnectionViewModel
 import ru.garshishka.modbustalker.viewmodel.ViewModelFactory
@@ -140,13 +144,13 @@ class DashFragment : Fragment() {
                 changeColorDueToStatusChange(it, binding.connectionIcon)
                 if (it == ConnectionStatus.DISCONNECTED) {
                     binding.apply {
-                        connectionIcon.setImageResource(R.drawable.signal_connected_24)
+                        connectionIcon.setImageResource(R.drawable.icon_signal_connected_24)
                         connectButton.setText(R.string.connect)
                         composeView.isVisible = false
                         changeValuePanel.isVisible = false
                     }
                 } else {
-                    binding.connectionIcon.setImageResource(R.drawable.signal_disconnected_24)
+                    binding.connectionIcon.setImageResource(R.drawable.icon_signal_disconnected_24)
                 }
                 if (it == ConnectionStatus.CONNECTED) {
                     binding.apply {
@@ -166,7 +170,7 @@ class DashFragment : Fragment() {
                 showResponseErrorToast(it.first, it.second)
             }
             registerWatchError.observe(viewLifecycleOwner) {
-                requireContext().showToast(R.string.register_watch_error, it)
+                requireContext().showToast(R.string.register_watch_error, it.first, it.second)
             }
             transactionNotFoundError.observe(viewLifecycleOwner) {
                 requireContext().showToast(R.string.error_transaction_not_found)
@@ -207,24 +211,16 @@ class DashFragment : Fragment() {
                                 modifier = Modifier
                                     .padding(4.dp)
                                     .fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = when (it[num].status) {
+                                        RegisterConnection.WORKING -> cardGreen
+                                        RegisterConnection.ERROR -> cardRed
+                                        RegisterConnection.PAUSE -> cardGray
+                                        RegisterConnection.LONG_WAIT -> cardYellow
+                                    },
+                                )
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    IconButton(
-                                        onClick = {
-                                            requireContext().deleteWatchedRegister(
-                                                num,
-                                                viewModel
-                                            )
-                                        },
-                                        modifier = Modifier
-                                            .padding(4.dp)
-                                            .weight(0.75f)
-                                    ) {
-                                        Icon(
-                                            painterResource(id = R.drawable.delete_24),
-                                            contentDescription = "Delete"
-                                        )
-                                    }
                                     Column(modifier = Modifier.weight(1.25f)) {
                                         Text(
                                             text = it[num].name,
@@ -242,6 +238,25 @@ class DashFragment : Fragment() {
                                             color = Color(0xFF333333),
                                             textAlign = TextAlign.Start,
                                             modifier = Modifier.padding(8.dp)
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            viewModel.pauseOrUnpauseWatchedRegister(it[num].address)
+                                        },
+                                        modifier = Modifier
+                                            .padding(4.dp)
+                                            .weight(0.75f)
+                                    ) {
+                                        Icon(
+                                            painterResource(
+                                                id = (if (it[num].status == RegisterConnection.WORKING ||
+                                                    it[num].status == RegisterConnection.LONG_WAIT
+                                                ) R.drawable.icon_pause_circle_24
+                                                else R.drawable.icon_send_circle_24)
+                                                //id = R.drawable.icon_pause_circle_24
+                                            ),
+                                            contentDescription = "Pause"
                                         )
                                     }
                                 }

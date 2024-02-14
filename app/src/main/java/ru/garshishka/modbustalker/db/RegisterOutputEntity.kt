@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import ru.garshishka.modbustalker.data.RegisterOutput
 import ru.garshishka.modbustalker.data.enums.OutputType
+import ru.garshishka.modbustalker.data.enums.RegisterConnection
 
 @Entity(tableName = "registers_output_table")
 data class RegisterOutputEntity(
@@ -15,7 +16,7 @@ data class RegisterOutputEntity(
     val valueFloat: Float?,
     val transactionNumber: Int,
     val outputType: OutputType,
-    val paused: Boolean,
+    val status: RegisterConnection,
 ) {
     fun toDto() = RegisterOutput(
         place,
@@ -25,7 +26,7 @@ data class RegisterOutputEntity(
         valueFloat,
         transactionNumber,
         outputType,
-        paused
+        status
     )
 
     companion object {
@@ -34,7 +35,7 @@ data class RegisterOutputEntity(
                 dto.place, dto.name, dto.address,
                 if (dto.outputType != OutputType.REAL32) dto.value else null,
                 if (dto.outputType == OutputType.REAL32) dto.valueFloat else null,
-                dto.transactionNumber, dto.outputType, dto.paused
+                dto.transactionNumber, dto.outputType, dto.status
             )
     }
 }

@@ -23,6 +23,7 @@ import ru.garshishka.modbustalker.data.RegisterOutput
 import ru.garshishka.modbustalker.data.RegistryOutputRepository
 import ru.garshishka.modbustalker.data.enums.ConnectionStatus
 import ru.garshishka.modbustalker.data.enums.OutputType
+import ru.garshishka.modbustalker.data.enums.RegisterConnection
 import ru.garshishka.modbustalker.utils.SingleLiveEvent
 import ru.garshishka.modbustalker.utils.errors.NotFoundTransactionNumberErrorException
 import ru.garshishka.modbustalker.utils.errors.ResponseErrorException
@@ -41,7 +42,6 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
     val communicatingStatus: LiveData<ConnectionStatus>
         get() = _communicatingStatus
 
-
     //TODO make debug text specific line length
     private val _debugText = MutableLiveData<String>()
     val debugText: LiveData<String>
@@ -50,14 +50,15 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
     private val _transactionNotFoundError = SingleLiveEvent<Int>()
     val transactionNotFoundError: LiveData<Int>
         get() = _transactionNotFoundError
-    private val _registerWatchError = SingleLiveEvent<String>()
-    val registerWatchError: LiveData<String>
+    private val _registerWatchError = SingleLiveEvent<Pair<String,Int>>()
+    val registerWatchError: LiveData<Pair<String,Int>>
         get() = _registerWatchError
     private val _registerResponseError = SingleLiveEvent<Pair<Int, Int>>()
     val registerResponseError: LiveData<Pair<Int, Int>>
         get() = _registerResponseError
 
     private val byteArraysToSend: MutableList<CommandToSend> = mutableListOf()
+    private val byteArraysPaused: MutableList<CommandToSend> = mutableListOf()
     private var transactionNumber: UShort = 0u
     private var registerCardNumber = 0
 
@@ -197,7 +198,7 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
                 //TODO make them paused, not delete outright
                 catch (e: NotFoundTransactionNumberErrorException) {
                     byteArraysToSend.remove(message)
-                    logError("Error transaction not found in DB $e")
+                    logError("Error: transaction not found in DB $e")
                     logError(e.message.toString())
                     _transactionNotFoundError.postValue(e.transactionNumber)
                 } catch (e: ResponseErrorException) {
@@ -210,12 +211,30 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
                     logError("Error sending or receiving $e")
                     logError(e.message.toString())
                     //TODO change error message
-                    _registerWatchError.postValue(e.message ?: e.toString())
+                    _registerWatchError.postValue((e.message ?: e.toString()) to message.registerAddress)
                 }
             }
             commandArrayBusy = false
             //TODO made this delay configurable
             delay(500)
+        }
+    }
+
+    fun pauseOrUnpauseWatchedRegister(registerAddress: Int, isError : Boolean = false) = viewModelScope.launch {
+        waitForCommandArrayToFree()
+        val register = repository.getRegisterByAddress(registerAddress)
+        register?.let {reg ->
+            if(reg.status == RegisterConnection.WORKING || reg.status == RegisterConnection.LONG_WAIT) {
+                val command = byteArraysToSend.first { it.registerAddress == registerAddress }
+                byteArraysToSend.remove(command)
+                byteArraysPaused.add(command)
+                repository.save(reg.copy(status = if(isError) RegisterConnection.ERROR else RegisterConnection.PAUSE))
+            } else{
+                val command = byteArraysPaused.first { it.registerAddress == registerAddress }
+                byteArraysPaused.remove(command)
+                byteArraysToSend.add(command)
+                repository.save(reg.copy(status = RegisterConnection.WORKING))
+            }
         }
     }
 

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="StatusIcon">
-        <item name="android:background">@drawable/circle_24</item>
+        <item name="android:background">@drawable/icon_circle_24</item>
         <item name="android:backgroundTint">@color/red</item>
         <item name="android:padding">10dp</item>
     </style>
