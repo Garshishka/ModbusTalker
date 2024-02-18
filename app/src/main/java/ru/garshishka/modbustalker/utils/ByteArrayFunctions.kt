@@ -1,5 +1,6 @@
 package ru.garshishka.modbustalker.utils
 
+import ru.garshishka.modbustalker.data.CommandToSend
 import ru.garshishka.modbustalker.data.enums.OutputType
 import java.nio.ByteBuffer
 
@@ -36,7 +37,6 @@ fun makeByteArrayForValueChange(
     val deviceAddress = 0x01
     val function = 0x10
     val amountToWrite = 0x1
-    val valueBytesAmount = 0x2
 
     val list = transactionNum.toInt().makeByteList() +
             listOf(
@@ -66,6 +66,14 @@ fun ByteArray.getTransactionAndFunctionNumber(): Pair<Int, Int> =
 
 fun ByteArray.read1ByteFromBuffer(offset: Int): Int =
     this[offset].toInt() and 0xff
+
+fun CommandToSend.setUpEmptyResponse(): ByteArray =
+    ByteArray(
+        if (this.functionNumber == 0x10) 12
+        else (9 + if (this.outputType == OutputType.INT16
+            || this.outputType == OutputType.UINT16
+        ) 2 else 4)
+    )
 
 
 fun Int.makeByteList(): List<Int> =

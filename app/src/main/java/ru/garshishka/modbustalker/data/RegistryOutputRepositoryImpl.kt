@@ -1,6 +1,7 @@
 package ru.garshishka.modbustalker.data
 
 import ru.garshishka.modbustalker.data.enums.OutputType
+import ru.garshishka.modbustalker.data.enums.RegisterConnection
 import ru.garshishka.modbustalker.db.RegisterOutputDao
 import ru.garshishka.modbustalker.db.RegisterOutputEntity
 import ru.garshishka.modbustalker.utils.errors.NotFoundTransactionNumberErrorException
@@ -20,9 +21,11 @@ class RegistryOutputRepositoryImpl(private val dao: RegisterOutputDao) : Registr
                     responseArray.size - 2 else responseArray.size - 4
             dao.save(
                 if (it.outputType != OutputType.REAL32) it.copy(
-                    value = responseArray.readBytes(offset, it.outputType).toInt()
+                    value = responseArray.readBytes(offset, it.outputType).toInt(),
+                    status = RegisterConnection.WORKING
                 ) else it.copy(
-                    valueFloat = responseArray.readBytes(offset, it.outputType).toFloat()
+                    valueFloat = responseArray.readBytes(offset, it.outputType).toFloat(),
+                    status = RegisterConnection.WORKING
                 )
             )
         }
