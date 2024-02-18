@@ -6,6 +6,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import io.ktor.network.selector.SelectorManager
 import io.ktor.network.sockets.Socket
 import io.ktor.network.sockets.aSocket
@@ -34,8 +35,12 @@ import ru.garshishka.modbustalker.utils.makeByteArrayForAnalogueOut
 import ru.garshishka.modbustalker.utils.makeByteArrayForValueChange
 import ru.garshishka.modbustalker.utils.read1ByteFromBuffer
 import ru.garshishka.modbustalker.utils.setUpEmptyResponse
+import javax.inject.Inject
 
-class ConnectionViewModel(private val repository: RegistryOutputRepository) : ViewModel() {
+@HiltViewModel
+class ConnectionViewModel @Inject constructor(
+    private val repository: RegistryOutputRepository
+) : ViewModel() {
     private val _connectionStatus = MutableLiveData(ConnectionStatus.DISCONNECTED)
     val connectionStatus: LiveData<ConnectionStatus>
         get() = _connectionStatus
@@ -129,7 +134,7 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
         }
     }
 
-    fun clearRegisterTable() {
+    fun clearRegisterTable() = viewModelScope.launch {
         repository.deleteAll()
     }
 
@@ -238,8 +243,8 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
                     repository.save(reg.copy(status = if (isError) RegisterConnection.ERROR else RegisterConnection.PAUSE))
                 } else {
                     val command = byteArraysPaused.first { it.registerAddress == registerAddress }
-                    byteArraysPaused.remove(command)
                     byteArraysToSend.add(command)
+                    byteArraysPaused.remove(command)
                     repository.save(reg.copy(status = RegisterConnection.WORKING))
                 }
             }
@@ -253,10 +258,10 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
         while (waitingForAnswer < 5 && !gotCorrectResponse) {
             val response = commandToSend.setUpEmptyResponse()
             try {
-                withTimeout(timeoutStep){
+                withTimeout(timeoutStep) {
                     receiveChannel.readAvailable(response)
                 }
-            } catch (e: TimeoutCancellationException){
+            } catch (e: TimeoutCancellationException) {
                 waitingForAnswer++.checkForLongWait(commandToSend)
                 continue
             }
@@ -295,7 +300,7 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
         }
     }
 
-    private fun Int.checkForLongWait(
+    private suspend fun Int.checkForLongWait(
         commandToSend: CommandToSend
     ) {
         //TODO Make changeable threshold for long wait
@@ -326,7 +331,7 @@ class ConnectionViewModel(private val repository: RegistryOutputRepository) : Vi
         }
     }
 
-    fun checkRegisterByAddress(address: Int): Boolean =
+    suspend fun checkRegisterByAddress(address: Int): Boolean =
         repository.getRegisterByAddress(address) != null
 
 

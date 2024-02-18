@@ -8,7 +8,6 @@ interface RegistryOutputRepository {
     suspend fun save(output: RegisterOutput)
     suspend fun updateValue(transactionNumber: Int, responseArray: ByteArray)
     suspend fun delete(addressToDelete: Int)
-    fun findRegisterByTransaction(transactionNumber: Int): RegisterOutput
-    fun getRegisterByAddress(address: Int): RegisterOutput?
-    fun deleteAll()
+    suspend fun getRegisterByAddress(address: Int): RegisterOutput?
+    suspend fun deleteAll()
 }

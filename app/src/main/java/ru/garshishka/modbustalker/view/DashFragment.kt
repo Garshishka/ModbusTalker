@@ -41,15 +41,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import androidx.fragment.app.activityViewModels
 import by.kirich1409.viewbindingdelegate.CreateMethod
 import by.kirich1409.viewbindingdelegate.viewBinding
+import dagger.hilt.android.AndroidEntryPoint
 import ru.garshishka.modbustalker.R
 import ru.garshishka.modbustalker.data.enums.ConnectionStatus
 import ru.garshishka.modbustalker.data.enums.OutputType
 import ru.garshishka.modbustalker.data.enums.RegisterConnection
 import ru.garshishka.modbustalker.databinding.FragmentDashBinding
-import ru.garshishka.modbustalker.di.DependencyContainer
 import ru.garshishka.modbustalker.ui.theme.cardGray
 import ru.garshishka.modbustalker.ui.theme.cardGreen
 import ru.garshishka.modbustalker.ui.theme.cardRed
@@ -60,15 +60,10 @@ import ru.garshishka.modbustalker.utils.showToast
 import ru.garshishka.modbustalker.view.dialog.chooseRegisterToWatch
 import ru.garshishka.modbustalker.view.dialog.registerWatchSettings
 import ru.garshishka.modbustalker.viewmodel.ConnectionViewModel
-import ru.garshishka.modbustalker.viewmodel.ViewModelFactory
 
+@AndroidEntryPoint
 class DashFragment : Fragment() {
-    //Dependency part
-    private val container = DependencyContainer.getInstance()
-
-    private val viewModel: ConnectionViewModel by viewModels {
-        ViewModelFactory(container.repository)
-    }
+    private val viewModel: ConnectionViewModel by activityViewModels()
     private val binding: FragmentDashBinding by viewBinding(createMethod = CreateMethod.INFLATE)
 
     private lateinit var ipViewContainer: List<EditText>

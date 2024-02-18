@@ -6,6 +6,8 @@ import android.util.Log
 import android.widget.EditText
 import android.widget.RadioGroup
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import ru.garshishka.modbustalker.R
 import ru.garshishka.modbustalker.utils.getOutputTypeFromButtonId
 import ru.garshishka.modbustalker.utils.showToast
@@ -30,14 +32,19 @@ fun FragmentActivity.chooseRegisterToWatch(context: Context, viewModel: Connecti
                     Log.e("UI", "Not numerical address")
                     showToast(R.string.input_error_not_numerical)
                 } else {
-                    if (viewModel.checkRegisterByAddress(registerAddress)) {
-                        showToast(R.string.input_error_register_already_watched, registerAddress)
-                    } else {
-                        viewModel.addWatchedRegister(
-                            registerName,
-                            registerAddress,
-                            getOutputTypeFromButtonId(radioGroup.checkedRadioButtonId)
-                        )
+                    lifecycleScope.launch {
+                        if (viewModel.checkRegisterByAddress(registerAddress)) {
+                            showToast(
+                                R.string.input_error_register_already_watched,
+                                registerAddress
+                            )
+                        } else {
+                            viewModel.addWatchedRegister(
+                                registerName,
+                                registerAddress,
+                                getOutputTypeFromButtonId(radioGroup.checkedRadioButtonId)
+                            )
+                        }
                     }
                 }
             } else {
