@@ -324,8 +324,6 @@ class DashFragment : Fragment() {
     }
 
     override fun onDestroy() {
-        //TODO For now we clean table
-        viewModel.clearRegisterTable()
         super.onDestroy()
     }
 

@@ -1,25 +1,14 @@
 package ru.garshishka.modbustalker.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.ktor.network.selector.SelectorManager
-import io.ktor.network.sockets.Socket
-import io.ktor.network.sockets.aSocket
-import io.ktor.network.sockets.openReadChannel
-import io.ktor.network.sockets.openWriteChannel
-import io.ktor.utils.io.ByteReadChannel
-import io.ktor.utils.io.ByteWriteChannel
 import io.ktor.utils.io.readAvailable
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import ru.garshishka.modbustalker.data.CommandToSend
 import ru.garshishka.modbustalker.data.RegisterOutput
@@ -27,43 +16,35 @@ import ru.garshishka.modbustalker.data.RegistryOutputRepository
 import ru.garshishka.modbustalker.data.enums.ConnectionStatus
 import ru.garshishka.modbustalker.data.enums.OutputType
 import ru.garshishka.modbustalker.data.enums.RegisterConnection
-import ru.garshishka.modbustalker.utils.SingleLiveEvent
-import ru.garshishka.modbustalker.utils.errors.NotFoundTransactionNumberErrorException
-import ru.garshishka.modbustalker.utils.errors.ResponseErrorException
+import ru.garshishka.modbustalker.utils.NotFoundTransactionNumberErrorException
+import ru.garshishka.modbustalker.utils.RegisterWatchException
+import ru.garshishka.modbustalker.utils.ResponseErrorException
 import ru.garshishka.modbustalker.utils.getTransactionAndFunctionNumber
 import ru.garshishka.modbustalker.utils.makeByteArrayForAnalogueOut
 import ru.garshishka.modbustalker.utils.makeByteArrayForValueChange
 import ru.garshishka.modbustalker.utils.read1ByteFromBuffer
 import ru.garshishka.modbustalker.utils.setUpEmptyResponse
+import ru.garshishka.modbustalker.viewmodel.interactor.ConnectionInteractor
+import ru.garshishka.modbustalker.viewmodel.interactor.DebugInteractor
+import ru.garshishka.modbustalker.viewmodel.interactor.LogType
 import javax.inject.Inject
 
 @HiltViewModel
 class ConnectionViewModel @Inject constructor(
-    private val repository: RegistryOutputRepository
+    private val repository: RegistryOutputRepository,
+    private val debugInteractor: DebugInteractor,
+    private val connectionInteractor: ConnectionInteractor,
 ) : ViewModel() {
-    private val _connectionStatus = MutableLiveData(ConnectionStatus.DISCONNECTED)
-    val connectionStatus: LiveData<ConnectionStatus>
-        get() = _connectionStatus
+    val connectionStatus: LiveData<ConnectionStatus> = connectionInteractor.connectionStatus
 
-    //TODO probably made them individual to registers
-    private val _communicatingStatus = MutableLiveData(ConnectionStatus.DISCONNECTED)
-    val communicatingStatus: LiveData<ConnectionStatus>
-        get() = _communicatingStatus
+    val communicatingStatus: LiveData<ConnectionStatus> = connectionInteractor.communicatingStatus
 
     //TODO make debug text specific line length
-    private val _debugText = MutableLiveData<String>()
-    val debugText: LiveData<String>
-        get() = _debugText
+    val debugText: LiveData<String> = debugInteractor.debugText
 
-    private val _transactionNotFoundError = SingleLiveEvent<Int>()
-    val transactionNotFoundError: LiveData<Int>
-        get() = _transactionNotFoundError
-    private val _registerWatchError = SingleLiveEvent<Pair<String, Int>>()
-    val registerWatchError: LiveData<Pair<String, Int>>
-        get() = _registerWatchError
-    private val _registerResponseError = SingleLiveEvent<Pair<Int, Int>>()
-    val registerResponseError: LiveData<Pair<Int, Int>>
-        get() = _registerResponseError
+    val transactionNotFoundError: LiveData<Int> = debugInteractor.transactionNotFoundError
+    val registerWatchError: LiveData<Pair<String, Int>> = debugInteractor.registerWatchError
+    val registerResponseError: LiveData<Pair<Int, Int>> = debugInteractor.registerResponseError
 
     private val byteArraysToSend: MutableList<CommandToSend> = mutableListOf()
     private val byteArraysPaused: MutableList<CommandToSend> = mutableListOf()
@@ -76,66 +57,17 @@ class ConnectionViewModel @Inject constructor(
     private var sendingAndReading = false
     private var commandArrayBusy = false
 
-    private val selectorManager = SelectorManager(Dispatchers.IO)
-    private lateinit var socket: Socket
-    private lateinit var receiveChannel: ByteReadChannel
-    private lateinit var sendChannel: ByteWriteChannel
-
     //TODO Take them from the settings
     private val timeoutStep = 250L
 
-    init {
-        _debugText.value = ""
-    }
-
     fun connect(ip: String, port: String) = viewModelScope.launch {
-        logDebug("connecting to socket $ip and ${port.toInt()}")
-        try {
-            _connectionStatus.value = ConnectionStatus.WORKING
-            socket = aSocket(selectorManager).tcp().connect(ip, port.toInt())
-            changeStatusOfConnection(
-                "Socket connected",
-                _connectionStatus,
-                ConnectionStatus.CONNECTED
-            )
-            receiveChannel = socket.openReadChannel()
-            sendChannel = socket.openWriteChannel(true)
-            //TODO For future probably no need
-            clearRegisterTable()
-
-            _communicatingStatus.value = ConnectionStatus.CONNECTED
-        } catch (e: Exception) {
-            logError("Connection error $e")
-            logError(e.message.toString())
-            _connectionStatus.value = ConnectionStatus.DISCONNECTED
-            _communicatingStatus.value = ConnectionStatus.DISCONNECTED
-        }
-        logDebug("socket ${connectionStatus.value.toString()}")
+        connectionInteractor.connect(ip, port)
     }
 
     fun disconnect() = viewModelScope.launch {
-        try {
-            logDebug("Closing connection")
-            sendingAndReading = false
-            waitForCommandArrayToFree()
-            _connectionStatus.value = ConnectionStatus.WORKING
-            withContext(Dispatchers.IO) {
-                socket.close()
-            }
-            changeStatusOfConnection(
-                "Socket disconnected",
-                _connectionStatus,
-                ConnectionStatus.DISCONNECTED
-            )
-            _communicatingStatus.value = ConnectionStatus.DISCONNECTED
-        } catch (e: Exception) {
-            logError("Disconnection error $e")
-            logError(e.message.toString())
-        }
-    }
-
-    fun clearRegisterTable() = viewModelScope.launch {
-        repository.deleteAll()
+        sendingAndReading = false
+        waitForCommandArrayToFree()
+        connectionInteractor.disconnect()
     }
 
     fun addWatchedRegister(registerName: String, registerAddress: Int, outputType: OutputType) =
@@ -164,7 +96,7 @@ class ConnectionViewModel @Inject constructor(
                 )
             )
             beginSendingAndReceivingMessages()
-            logDebug("added register $registerAddress with transaction $transactionNumber to watch")
+            debugInteractor.addToLog("added register $registerAddress with transaction $transactionNumber to watch")
             registerCardNumber++
             transactionNumber++
         }
@@ -186,7 +118,7 @@ class ConnectionViewModel @Inject constructor(
                     0x10
                 )
             )
-            logDebug("send $newValue to register $registerAddress with transaction $transactionNumber to set")
+            debugInteractor.addToLog("send $newValue to register $registerAddress with transaction $transactionNumber to set")
             transactionNumber++
         }
 
@@ -199,29 +131,23 @@ class ConnectionViewModel @Inject constructor(
             commandArrayBusy = true
             byteArraysToSend.forEach { message ->
                 try {
-                    _communicatingStatus.value = ConnectionStatus.WORKING
-                    sendChannel.writeFully(message.command, 0, message.command.size)
+                    connectionInteractor.changeCommunicatingStatus(ConnectionStatus.WORKING)
+                    connectionInteractor.sendChannel.writeFully(message.command, 0, message.command.size)
 
                     waitingForResponse(message)
 
-                    _communicatingStatus.value = ConnectionStatus.CONNECTED
+                    connectionInteractor.changeCommunicatingStatus(ConnectionStatus.CONNECTED)
                 } catch (e: NotFoundTransactionNumberErrorException) {
                     pauseOrUnpauseWatchedRegister(message.registerAddress, true)
-                    logError("Error: transaction not found in DB $e")
-                    logError(e.message.toString())
-                    _transactionNotFoundError.postValue(e.transactionNumber)
+                    debugInteractor.getException(e, "Error: transaction not found in DB")
                 } catch (e: ResponseErrorException) {
                     pauseOrUnpauseWatchedRegister(message.registerAddress, true)
-                    logError("Error response $e")
-                    logError(e.message.toString())
-                    _registerResponseError.postValue(e.errorCode to e.registerNumber)
+                    debugInteractor.getException(e, "Error response")
                 } catch (e: Exception) {
                     pauseOrUnpauseWatchedRegister(message.registerAddress, true)
-                    logError("Error sending or receiving $e")
-                    logError(e.message.toString())
-                    //TODO change error message
-                    _registerWatchError.postValue(
-                        (e.message ?: e.toString()) to message.registerAddress
+                    debugInteractor.getException(
+                        RegisterWatchException(message.registerAddress),
+                        "Error sending or receiving"
                     )
                 }
             }
@@ -259,7 +185,7 @@ class ConnectionViewModel @Inject constructor(
             val response = commandToSend.setUpEmptyResponse()
             try {
                 withTimeout(timeoutStep) {
-                    receiveChannel.readAvailable(response)
+                    connectionInteractor.receiveChannel.readAvailable(response)
                 }
             } catch (e: TimeoutCancellationException) {
                 waitingForAnswer++.checkForLongWait(commandToSend)
@@ -272,7 +198,7 @@ class ConnectionViewModel @Inject constructor(
                 if (output.second == commandToSend.functionNumber) {
                     var outputString = ""
                     response.forEach { outputString += "${it.toUByte()}, " }
-                    logResponse(outputString)
+                    debugInteractor.addToLog(outputString, LogType.RESPONSE)
                     when (commandToSend.functionNumber) {
                         0x3 -> receivedResponseForAnalogueOutput(output.first, response)
                         0x10 -> receivedResponseForChangeValue(commandToSend)
@@ -296,7 +222,7 @@ class ConnectionViewModel @Inject constructor(
             }
         } //If we waited and didn't got the right response
         if (!gotCorrectResponse) {
-            logError("skipped transaction $transactionNumber")
+            debugInteractor.addToLog("skipped transaction $transactionNumber", LogType.ERROR)
         }
     }
 
@@ -334,41 +260,10 @@ class ConnectionViewModel @Inject constructor(
     suspend fun checkRegisterByAddress(address: Int): Boolean =
         repository.getRegisterByAddress(address) != null
 
-
-    private fun changeStatusOfConnection(
-        message: String,
-        statusVar: MutableLiveData<ConnectionStatus>,
-        newStatus: ConnectionStatus
-    ) {
-        logDebug(message)
-        statusVar.value = newStatus
-    }
-
     private fun beginSendingAndReceivingMessages() {
         if (!sendingAndReading) {
             sendingAndReading = true
             sendingAndReadingMessages()
-        }
-    }
-
-    private fun logDebug(message: String) {
-        Log.d("ModBus", message)
-        addToDebugText("$message\n")
-    }
-
-    private fun logResponse(message: String) {
-        Log.i("ModBus", message)
-        addToDebugText("RESPONSE $message\n")
-    }
-
-    private fun logError(message: String) {
-        Log.e("ModBus", message)
-        addToDebugText("!ERROR! $message\n")
-    }
-
-    private fun addToDebugText(message: String) {
-        _debugText.value?.let {
-            _debugText.value = (message + it).lines().takeLast(100).joinToString("\n")
         }
     }
 
