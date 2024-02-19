@@ -198,7 +198,6 @@ class DashFragment : Fragment() {
                                     requireActivity().registerWatchSettings(
                                         requireContext(),
                                         viewModel,
-                                        num,
                                         it[num]
                                     )
                                 },

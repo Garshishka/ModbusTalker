@@ -16,7 +16,6 @@ import ru.garshishka.modbustalker.viewmodel.ConnectionViewModel
 fun FragmentActivity.registerWatchSettings(
     context: Context,
     viewModel: ConnectionViewModel,
-    registerNumberInGrid: Int,
     register: RegisterOutput,
 ) {
     val dialogView = this.layoutInflater.inflate(
@@ -46,7 +45,7 @@ fun FragmentActivity.registerWatchSettings(
         .create()
     dialogView.findViewById<Button>(R.id.button_delete_register)
         .setOnClickListener {
-            context.deleteWatchedRegister(registerNumberInGrid, viewModel)
+            context.deleteWatchedRegister(register.address, viewModel)
             dialog.dismiss()
         }
     dialog.show()

@@ -5,6 +5,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import ru.garshishka.modbustalker.data.RegistryOutputRepository
+import ru.garshishka.modbustalker.viewmodel.interactor.CommunicationInteractor
+import ru.garshishka.modbustalker.viewmodel.interactor.CommunicationInteractorImpl
 import ru.garshishka.modbustalker.viewmodel.interactor.ConnectionInteractor
 import ru.garshishka.modbustalker.viewmodel.interactor.ConnectionInteractorKtorImpl
 import ru.garshishka.modbustalker.viewmodel.interactor.DebugInteractor
@@ -27,5 +29,15 @@ class InteractorModule {
         repository: RegistryOutputRepository
     ): ConnectionInteractor {
         return ConnectionInteractorKtorImpl(debugInteractor, repository)
+    }
+
+    @Provides
+    @Singleton
+    fun providesCommunicationInteractor(
+        debugInteractor: DebugInteractor,
+        connectionInteractor: ConnectionInteractor,
+        repository: RegistryOutputRepository,
+    ) : CommunicationInteractor{
+        return CommunicationInteractorImpl(debugInteractor, connectionInteractor, repository)
     }
 }
