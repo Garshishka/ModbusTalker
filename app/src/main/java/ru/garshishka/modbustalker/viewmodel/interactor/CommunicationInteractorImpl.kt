@@ -48,13 +48,13 @@ class CommunicationInteractorImpl @Inject constructor(
 
                     connectionInteractor.changeCommunicatingStatus(ConnectionStatus.CONNECTED)
                 } catch (e: NotFoundTransactionNumberErrorException) {
-                    pauseOrUnpauseWatchedRegister(message.registerAddress, true)
+                    pauseRegisterOnError(message.registerAddress)
                     debugInteractor.getException(e, "Error: transaction not found in DB")
                 } catch (e: ResponseErrorException) {
-                    pauseOrUnpauseWatchedRegister(message.registerAddress, true)
+                    pauseRegisterOnError(message.registerAddress)
                     debugInteractor.getException(e, "Error response")
                 } catch (e: Exception) {
-                    pauseOrUnpauseWatchedRegister(message.registerAddress, true)
+                    pauseRegisterOnError(message.registerAddress)
                     debugInteractor.getException(
                         RegisterWatchException(message.registerAddress),
                         "Error sending or receiving"
@@ -144,7 +144,7 @@ class CommunicationInteractorImpl @Inject constructor(
         waitForCommandArrayToFree()
     }
 
-    override suspend fun pauseOrUnpauseWatchedRegister(registerAddress: Int, isError: Boolean) {
+    override suspend fun pauseOrUnpauseWatchedRegister(registerAddress: Int) {
         waitForCommandArrayToFree()
         val register = repository.getRegisterByAddress(registerAddress)
         register?.let { reg ->
@@ -152,7 +152,7 @@ class CommunicationInteractorImpl @Inject constructor(
                 val command = byteArraysToSend.first { it.registerAddress == registerAddress }
                 byteArraysToSend.remove(command)
                 byteArraysPaused.add(command)
-                repository.save(reg.copy(status = if (isError) RegisterConnection.ERROR else RegisterConnection.PAUSE))
+                repository.save(reg.copy(status = RegisterConnection.PAUSE))
             } else {
                 val command = byteArraysPaused.first { it.registerAddress == registerAddress }
                 byteArraysToSend.add(command)
@@ -160,6 +160,14 @@ class CommunicationInteractorImpl @Inject constructor(
                 repository.save(reg.copy(status = RegisterConnection.WORKING))
             }
         }
+    }
+
+    private suspend fun pauseRegisterOnError(registerAddress: Int){
+        val register = repository.getRegisterByAddress(registerAddress)
+        val command = byteArraysToSend.first { it.registerAddress == registerAddress }
+        byteArraysToSend.remove(command)
+        byteArraysPaused.add(command)
+        register?.copy()?.let { repository.save(it.copy(status = RegisterConnection.ERROR)) }
     }
 
     private fun receivedResponseForChangeValue(commandToSend: CommandToSend) {

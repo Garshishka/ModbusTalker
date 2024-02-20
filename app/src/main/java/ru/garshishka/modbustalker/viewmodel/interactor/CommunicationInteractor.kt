@@ -8,5 +8,5 @@ interface CommunicationInteractor {
     suspend fun removeCommandToSend(registerAddress: Int)
     fun beginSendingAndReadingMessages(viewModelScope: CoroutineScope)
     suspend fun stopCommunication()
-    suspend fun pauseOrUnpauseWatchedRegister(registerAddress: Int, isError: Boolean = false)
+    suspend fun pauseOrUnpauseWatchedRegister(registerAddress: Int)
 }

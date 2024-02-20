@@ -112,7 +112,7 @@ class DashFragment : Fragment() {
                     }
                     val newValueNumber: Number? = when (outputType) {
                         OutputType.UINT16 -> if (newValue.text.toString().contains("-"))
-                            null else newValue.text.toString().toShortOrNull()
+                            null else newValue.text.toString().toUShortOrNull()?.toInt()
 
                         OutputType.INT16 -> newValue.text.toString().toShortOrNull()
                         OutputType.INT32 -> newValue.text.toString().toIntOrNull()

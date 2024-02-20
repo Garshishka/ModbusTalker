@@ -91,13 +91,15 @@ class ConnectionViewModel @Inject constructor(
                     makeByteArrayForValueChange(
                         registerAddress,
                         newValue.toInt(),
-                        transactionNumber
+                        transactionNumber,
+                        outputType
                     ),
                     registerAddress,
                     outputType,
                     0x10
                 )
             )
+            beginSendingAndReceivingMessages()
             debugInteractor.addToLog("send $newValue to register $registerAddress with transaction $transactionNumber to set")
             transactionNumber++
         }
@@ -106,9 +108,9 @@ class ConnectionViewModel @Inject constructor(
         repository.save(newRegisterOutput)
     }
 
-    fun pauseOrUnpauseWatchedRegister(registerAddress: Int, isError: Boolean = false) =
+    fun pauseOrUnpauseWatchedRegister(registerAddress: Int) =
         viewModelScope.launch {
-            communicationInteractor.pauseOrUnpauseWatchedRegister(registerAddress, isError)
+            communicationInteractor.pauseOrUnpauseWatchedRegister(registerAddress)
         }
 
 
